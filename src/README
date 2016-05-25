@@ -1,1 +1,6 @@
 src for source code
+
+Subdirectories:
+-- basset_legacy : lua code from Basset
+-- data_preparation : DNase scraping code from Basset
+-- visualization : plotting code

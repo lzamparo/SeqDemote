@@ -23,11 +23,11 @@ def main():
     beds_out = open('roadmap_beds.txt', 'w')
 
     for i in range(df.shape[0]):
-    	eid = df.iloc[i,1]
+	eid = df.iloc[i,1]
 
-    	peaks_bed = 'roadmap/%s-DNase.hotspot.fdr0.01.peaks.bed.gz' % eid
-    	if os.path.isfile(peaks_bed):
-    		print >> beds_out, df.iloc[i,5], '\t', peaks_bed
+	peaks_bed = 'roadmap/%s-DNase.hotspot.fdr0.01.peaks.bed.gz' % eid
+	if os.path.isfile(peaks_bed):
+	    print >> beds_out, df.iloc[i,5], '\t', peaks_bed
 
     beds_out.close()
 
