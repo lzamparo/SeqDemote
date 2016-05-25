@@ -6,7 +6,7 @@ import itertools
 
 import numpy as np
 import numpy.random as npr
-import khmer
+#import khmer
 from sklearn import preprocessing
 
 ################################################################################
@@ -156,13 +156,22 @@ def dna_one_hot(seq, seq_len=None, flatten=True):
 # entry.
 ################################################################################
 def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=True):
-    ktable = khmer.new_ktable(kmer_length)
+    
     if keep_repeats:
         seq = seq.upper()
-    kmers_position = {ktable.reverse_hash(i): i for i in range(0, ktable.n_entries())}
-    trimers = [seq[i:i+3] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
+    
+    #ktable = khmer.new_ktable(kmer_length)
+    #kmers_position = {ktable.reverse_hash(i): i for i in range(0, ktable.n_entries())}
+        
+    bases = ['A','C','G','T']
+    kmers = [''.join(p) for p in itertools.product(bases, repeat=kmer_length)]
+    kmers_position = {kmers[i]: i for i in range(0, len(kmers))}
+    
+    
+    
+    my_kmers = [seq[i:i+kmer_length] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
     seq_code = np.zeros((int(pow(4, kmer_length)), len(seq) - kmer_length + 1), dtype='uint8')    
-    for i, kmer in enumerate(trimers):
+    for i, kmer in enumerate(my_kmers):
         try:
             seq_code[kmers_position[kmer],i] = 1
         except:
@@ -489,8 +498,12 @@ def kmer_vecs_to_dna(seq_vecs, k):
     Output: a list of decoded (4^k, |sequence| / k) DNA sequences
     
     '''
-    ktable = khmer.new_ktable(k)
-    kmer_decoder = {i: ktable.reverse_hash(i) for i in range(0, ktable.n_entries())}
+    #ktable = khmer.new_ktable(k)
+    #kmer_decoder = {i: ktable.reverse_hash(i) for i in range(0, ktable.n_entries())}
+    
+    bases = ['A','C','G','T']
+    kmers = [''.join(p) for p in itertools.product(bases, repeat=k)]   
+    kmer_decoder = {i: kmers[i] for i in range(0, len(kmers))}
     
     alphabet_size = int(pow(4, k))
     

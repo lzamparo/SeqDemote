@@ -25,7 +25,7 @@ aaa_3mer_string = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 aaa_3mer_position = 0
 
 ttt_3mer_string = 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT'
-ttt_3mer_position = 21
+ttt_3mer_position = 63
 
 rando_3mer_string = 'ATGGGGTAGAGAATGGGGTAGAGA'
 
