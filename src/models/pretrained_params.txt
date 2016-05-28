@@ -1,0 +1,16 @@
+conv_filters	300
+conv_filters	200
+conv_filters	200
+conv_filter_sizes	19
+conv_filter_sizes	11
+conv_filter_sizes	7
+pool_width		3
+pool_width		4
+pool_width		4
+hidden_units		1000
+hidden_units		1000
+hidden_dropouts		0.3
+hidden_dropouts		0.3
+learning_rate		0.002
+weight_norm		7
+momentum		0.98
