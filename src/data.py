@@ -1,72 +1,61 @@
-import glob
 import os
-
 import numpy as np
+
 import multiprocessing as mp
-#import utils
 
-DNase_train_peaks = 1880000
-
-directories = glob.glob("../data/")
-class_names = [os.path.basename(d) for d in directories]
-class_names.sort()
-num_classes = len(class_names)
-
-paths_train = glob.glob("data/train/*/*")
-paths_train.sort()
-
-paths_test = glob.glob("data/test/*")
-paths_test.sort()
-
-paths = {
-    'train': paths_train,
-    'test': paths_test,
-}
-
-
-# labels_train = np.zeros(len(paths['train']), dtype='int32')
-# for k, path in enumerate(paths['train']):
-#     class_name = os.path.basename(os.path.dirname(path))
-#     labels_train[k] = class_names.index(class_name)
-labels_train = utils.load_gz("data/labels_train.npy.gz")
-
+### Possible data augmentation schemes by subsequence plucking, and kmerization of different varieties
 
 default_augmentation_params = {
     'kmerize': 1,
-    'rotation_range': (0, 360),
-    'shear_range': (0, 0),
-    'translation_range': (-4, 4),
-    'do_flip': True,
-    'allow_stretch': False,
+    'subsequence_range': (-500, 500),
+    'subsequence_length': 500,
+    'do_subsequences': False,
 }
 
-no_augmentation_params = {
-    'zoom_range': (1.0, 1.0),
-    'rotation_range': (0, 0),
-    'shear_range': (0, 0),
-    'translation_range': (0, 0),
-    'do_flip': False,
-    'allow_stretch': False,
+kmer_augmentation_params = {
+    'kmerize': 4,
+    'subsequence_range': (-300, 300),
+    'subsequence_length': 0,
+    'do_subsequences': False,
 }
 
-no_augmentation_params_gaussian = {
-    'zoom_std': 0.0,
-    'rotation_range': (0, 0),
-    'shear_std': 0.0,
-    'translation_std': 0.0,
-    'do_flip': False,
-    'stretch_std': 0.0,
+subsequence_augmentation_params = {
+    'kmerize': 1,
+    'subsequence_range': (-500, 500),
+    'subsequence_length': 500,
+    'do_subsequences': False,
 }
 
 
-def sequence_gen(sequences, labels, chunk_size=4096, num_chunks=458, rng=np.random):
-    ''' Yield one-hot encoded sequence data one chunk at a time '''
-    pass
+### Data provider generators
 
-### k-merizing generator ###
+def get_h5_handle(path):
+    """
+    Get the h5 handle to the
+    """
+    return h5py.File(path)
 
-def kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks=458, rng=np.random):
-    ''' Yield positional kmer one-hot encoded data one chunk at a time '''
+
+def train_sequence_gen(sequences, labels, chunk_size=4096, num_chunks=458, rng=np.random):
+    ''' Given training data array ref, build and return a generator for one-hot encoded training sequence data '''
+    for n in xrange(num_chunks):
+        indices = rng.randint(0, len(sequences), chunk_size)
+        
+        sequences_rows = sequences.shape[2]
+        sequences_cols = sequences.shape[3]
+        
+        chunk_x = np.zeros((chunk_size, sequences_rows, sequences_cols), dtype='float32')
+        chunk_y = np.zeros((chunk_size,), dtype='float32')
+        
+        for k, idx in enumerate(indices):
+            chunk_x[k] = sequences[indices[k]]
+            chunk_y[k] = labels[indices[k]]
+            
+        yield chunk_x, chunk_y
+    
+
+def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks=458, rng=np.random):
+    ''' Given training data array ref, build and return a generator for one-hot encoded kmerized training sequence data '''
     pass
 
 

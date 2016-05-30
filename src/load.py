@@ -3,7 +3,7 @@ import itertools
 
 import data
 import os
-#import utils
+import buffering
 import h5py
 
 class DataLoader(object):
@@ -18,29 +18,29 @@ class DataLoader(object):
         #else:
             #print "using NON-default validation split: %s" % self.validation_split_path
 
-    def estimate_params(self):
-        pass
-
-    def load_train(self):
-        #images = data.load('train')
-        #labels = utils.one_hot(data.labels_train, m=121).astype(np.float32)
-
-        #split = np.load(self.validation_split_path)
-        #indices_train = split['indices_train']
-        #indices_valid = split['indices_valid']
-
-        #self.images_train = images[indices_train]
-        #self.labels_train = labels[indices_train]
-        #self.images_valid = images[indices_valid]
-        #self.labels_valid = labels[indices_valid]
-        
-        pass
+    def load_train(self):   
+        h5file = data.get_h5_handle(self.data_path)
+        train_in = h5file['/train_in']
+        train_out = h5file['/train_out']
+        self.train_in = train_in
+        self.train_out = train_out
+        h5file.close()
 
     def load_test(self):
-        pass
+        h5file = data.get_h5_handle(self.data_path)
+        test_in = h5file['/test_in']
+        test_out = h5file['test_out']
+        self.test_in = test_in
+        self.test_out = test_out
+        h5file.close()
         
     def load_validation(self):
-        pass
+        h5file = data.get_h5_handle(self.data_path)
+        valid_in = h5file['/valid_in']
+        valid_out = h5file['valid_out']
+        self.valid_in = valid_in
+        self.valid_out = valid_out
+        h5file.close()
 
     def get_params(self):
         return { pname: getattr(self, pname, None) for pname in self.params }
@@ -48,42 +48,21 @@ class DataLoader(object):
     def set_params(self, p):
         self.__dict__.update(p)
 
-
-
-
-### DNase data looks like this:
-        #test_in                  Dataset {71886, 4, 1, 600}
-        #test_out                 Dataset {71886, 164}
-        #train_in                 Dataset {1880000, 4, 1, 600}
-        #train_out                Dataset {1880000, 164}
-        #valid_in                 Dataset {70000, 4, 1, 600}
-        #valid_out                Dataset {70000, 164}        
         
 class DNaseDataLoader(DataLoader):
-    def get_h5_handle():
-        """
-        Load all sequences into memory for faster processing
-        """
-        path = os.path.abspath("../data/DNase/encode_roadmap.h5")
-        return h5py.File(path)
-   
-    def load_train(self):
-        data_file = self.get_h5_handle()
-        train_in = data_file['/train_in']
-        train_out = data_file['/train_out']
-        data_file.close()
-        return (train_in, train_out)
     
-    def load_test(self):
-        pass
+    def __init__(self, **kwargs):
+        DataLoader.__init__(self)
+        self.__dict__.update(kwargs)
+        self.data_path = os.path.abspath("../data/DNase/encode_roadmap.h5")
+        self.train_set_size = 1880000        
     
-    def load_validation(self):
-        pass
-    
-    def create_batch_gen(self, sequences, labels):
-        pass
+    def create_batch_gen(self, sequences, labels, chunk_size=4096, num_chunks=458):
+        gen = data.train_sequence_gen(sequences, labels, chunk_size, num_chunks, 
+                                     rng=np.random)
+        return buffering.buffered_gen_threaded(gen)
             
-    
+            
         
 class RescaledDataLoader(DataLoader):
     def create_random_gen(self, images, labels):

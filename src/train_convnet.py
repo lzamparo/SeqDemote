@@ -36,11 +36,10 @@ expid = utils.generate_expid(config_name)
 metadata_tmp_path = "/var/tmp/%s.pkl" % expid
 metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
 
-print
-print "Experiment ID: %s" % expid
-print
 
-print "Build model"
+print("Experiment ID: ", expid)
+
+print("...Build model")
 model = config.build_model()
 if len(model) == 4:
     l_ins, l_out, l_resume, l_exclude = model
@@ -124,6 +123,7 @@ if hasattr(config, 'resume_path'):
     losses_train = resume_metadata['losses_train']
     losses_eval_valid = resume_metadata['losses_eval_valid']
     losses_eval_train = resume_metadata['losses_eval_train']
+    
 elif hasattr(config, 'pre_init_path'):
     print "Load model parameters for initializing first x layers"
     resume_metadata = np.load(config.pre_init_path)
@@ -133,6 +133,7 @@ elif hasattr(config, 'pre_init_path'):
     losses_train = []
     losses_eval_valid = []
     losses_eval_train = []
+    
 else:
     chunks_train_idcs = range(config.num_chunks_train)
     losses_train = []
@@ -140,7 +141,7 @@ else:
     losses_eval_train = []
 
 
-print "Load data"
+print("...Load data")
 config.data_loader.load_train()
 
 if hasattr(config, 'resume_path'):
@@ -165,7 +166,7 @@ else:
     create_eval_train_gen = lambda: config.data_loader.create_fixed_gen(config.data_loader.images_train, augment=False)
 
 
-print "Train model"
+print("...Train model")
 start_time = time.time()
 prev_time = start_time
 
