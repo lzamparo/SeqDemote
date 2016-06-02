@@ -20,7 +20,6 @@ import pylab as plt
 import data
 import utils
 import buffering
-import nn_plankton
 
 from subprocess import Popen
 
@@ -89,7 +88,7 @@ givens = {
     obj.target_var: y_shared[idx*config.batch_size:(idx+1)*config.batch_size],
 }
 for l_in, x_shared in zip(l_ins, xs_shared):
-     givens[l_in.input_var] = x_shared[idx*config.batch_size:(idx+1)*config.batch_size]
+    givens[l_in.input_var] = x_shared[idx*config.batch_size:(idx+1)*config.batch_size]
 
 
 if hasattr(config, 'build_updates'):
