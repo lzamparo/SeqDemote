@@ -62,7 +62,7 @@ for layer in all_layers:
 if hasattr(config, 'build_objective'):
     obj = config.build_objective(l_ins, l_out)
 else:
-    obj = nn.objectives.Objective(l_out, loss_function=nn_plankton.log_loss)
+    obj = nn.objectives.Objective(l_out, loss_function=nn.objectives.binary_crossentropy(y, t))
 
 
 train_loss = obj.get_loss()

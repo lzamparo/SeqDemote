@@ -111,3 +111,7 @@ def build_objective(l_ins, l_out):
         return nn.objectives.binary_crossentropy(y, t) + lambda_reg * reg_term
 
     return nn.objectives.Objective(l_out, loss_function=loss)
+
+def build_updates(train_loss, all_params, learning_rate):
+    # TODO: does weight norm belong here maybe?
+    pass
