@@ -115,7 +115,7 @@ def _get_table_str(table):
     col_size = [max(len(str(val)) for val in column) for column in zip(*table)]
     for line in table:
         table_str += '\n'
-        table_str += '    '.join('{0:<{1}}'.format(val, col_size[i]) for i, val in enumerate(line))
+        table_str += '    '.join('{0!s:<{1}}'.format(val, col_size[i]) for i, val in enumerate(line))
     return table_str
 
 
