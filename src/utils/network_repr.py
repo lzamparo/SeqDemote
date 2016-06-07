@@ -1,3 +1,5 @@
+import sys, os
+import importlib.util
 import lasagne
 from lasagne.layers import get_all_layers
 from collections import deque, defaultdict
@@ -152,12 +154,47 @@ def example2():
     return None
 
 
+### beware the importlib gremlins:
+### Preferred syntax for importing a module in 3.5.x
+#import importlib.util
+#spec = importlib.util.spec_from_file_location("module.name", "/path/to/file.py")
+#foo = importlib.util.module_from_spec(spec)
+#spec.loader.exec_module(foo)
+#foo.MyClass()
+### for 3.3, 3.4
+#from importlib.machinery import SourceFileLoader
+
+#foo = SourceFileLoader("module.name", "/path/to/file.py").load_module()
+#foo.MyClass()
+
+
+
 def main():
     print('===========================================================')
     example1()
     print('===========================================================')
     example2()
     print('===========================================================')
+    if len(sys.argv) == 2:
+        network_name = sys.argv[1]
+        network_path_name = os.path.join(os.path.dirname(os.getcwd()),'models',network_name)
+        spec = importlib.util.spec_from_file_location(network_name, network_path_name)
+        network_mod = importlib.util.module_from_spec(spec)
+        model = network_mod.build_model()
+        
+        if len(model) == 4:
+            l_ins, l_out, l_resume, l_exclude = model
+        elif len(model) == 3:
+            l_ins, l_out, l_resume = model
+            l_exclude = l_ins[0]
+        else:
+            l_ins, l_out = model
+            l_resume = l_out
+            l_exclude = l_ins[0]
+        
+        layers = get_all_layers(l_out)
+        print(get_network_str(layers, get_network=False, incomings=True, outgoings=True))
+    
     return None
 
 if __name__ == '__main__':
