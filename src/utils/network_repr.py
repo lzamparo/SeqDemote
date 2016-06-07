@@ -180,6 +180,7 @@ def main():
         network_path_name = os.path.join(os.path.dirname(os.getcwd()),'models',network_name)
         spec = importlib.util.spec_from_file_location(network_name, network_path_name)
         network_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(network_mod)
         model = network_mod.build_model()
         
         if len(model) == 4:

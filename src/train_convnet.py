@@ -7,7 +7,7 @@ import lasagne as nn
 import time
 import os
 import sys
-import importlib
+import importlib.util
 import cPickle as pickle
 from datetime import datetime, timedelta
 import string
@@ -27,19 +27,21 @@ from subprocess import Popen
 if len(sys.argv) < 2:
     sys.exit("Usage: train_convnet.py <configuration_name>")
 
-config_name = sys.argv[1]
-config = importlib.import_module("configurations.%s" % config_name)
+model_config = sys.argv[1]
+model_path_name = os.path.join(os.path.expanduser(os.getcwd()),'models',model_config)
+spec = importlib.util.spec_from_file_location(model_config, model_path_name)
+model_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(model_module)
+    
 
-
-expid = utils.generate_expid(config_name)
-metadata_tmp_path = "/var/tmp/%s.pkl" % expid
-metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
-
-
-print("Experiment ID: ", expid)
+### TODO: useful, but only for when training is ramped up.
+#expid = utils.generate_expid(config_name)
+#metadata_tmp_path = "/var/tmp/%s.pkl" % expid
+#metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
+#print("Experiment ID: ", expid)
 
 print("...Build model")
-model = config.build_model()
+model = model_module.build_model()
 if len(model) == 4:
     l_ins, l_out, l_resume, l_exclude = model
 elif len(model) == 3:
@@ -53,12 +55,15 @@ else:
 
 all_layers = nn.layers.get_all_layers(l_out)
 num_params = nn.layers.count_params(l_out)
-print "  number of parameters: %d" % num_params
-print "  layer output shapes:"
+
+print("...number of parameters: ", num_params)
+print("...layer output shapes:")
 for layer in all_layers:
     name = string.ljust(layer.__class__.__name__, 32)
-    print "    %s %s" % (name, layer.get_output_shape(),)
+    print(name, layer.get_output_shape())
 
+
+print("...setting the objective ")
 if hasattr(config, 'build_objective'):
     obj = config.build_objective(l_ins, l_out)
 else:
@@ -68,7 +73,6 @@ else:
 train_loss = obj.get_loss()
 output = l_out.get_output(deterministic=True)
 
-all_params = nn.layers.get_all_params(l_out)
 all_excluded_params = nn.layers.get_all_params(l_exclude)
 all_params = list(set(all_params) - set(all_excluded_params))
 
@@ -76,10 +80,13 @@ input_ndims = [len(l_in.get_output_shape()) for l_in in l_ins]
 xs_shared = [nn.utils.shared_empty(dim=ndim) for ndim in input_ndims]
 y_shared = nn.utils.shared_empty(dim=2)
 
+
+print("...setting the learning rate schedule ")
 if hasattr(config, 'learning_rate_schedule'):
     learning_rate_schedule = config.learning_rate_schedule
 else:
     learning_rate_schedule = { 0: config.learning_rate }
+    
 learning_rate = theano.shared(np.float32(learning_rate_schedule[0]))
 
 idx = T.lscalar('idx')
@@ -90,24 +97,23 @@ givens = {
 for l_in, x_shared in zip(l_ins, xs_shared):
     givens[l_in.input_var] = x_shared[idx*config.batch_size:(idx+1)*config.batch_size]
 
-
+print("...setting the optimization scheme ")
 if hasattr(config, 'build_updates'):
     updates = config.build_updates(train_loss, all_params, learning_rate)
 else:
-    updates = nn.updates.nesterov_momentum(train_loss, all_params, learning_rate, config.momentum)
+    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, config.momentum)
 
 if hasattr(config, 'censor_updates'):
     updates = config.censor_updates(updates, l_out)
-
 
 iter_train = theano.function([idx], train_loss, givens=givens, updates=updates)
 compute_output = theano.function([idx], output, givens=givens, on_unused_input="ignore")
 
 
 if hasattr(config, 'resume_path'):
-    print "Load model parameters for resuming"
+    print("Load model parameters for resuming")
     if hasattr(config, 'pre_init_path'):
-        print "lresume=lout"
+        print("lresume = lout")
         l_resume = l_out
     resume_metadata = np.load(config.resume_path)
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'])
@@ -117,14 +123,14 @@ if hasattr(config, 'resume_path'):
 
     # set lr to the correct value
     current_lr = np.float32(utils.current_learning_rate(learning_rate_schedule, start_chunk_idx))
-    print "  setting learning rate to %.7f" % current_lr
+    print("...setting learning rate to {0:.7f}.".format(current_lr))
     learning_rate.set_value(current_lr)
     losses_train = resume_metadata['losses_train']
     losses_eval_valid = resume_metadata['losses_eval_valid']
     losses_eval_train = resume_metadata['losses_eval_train']
     
 elif hasattr(config, 'pre_init_path'):
-    print "Load model parameters for initializing first x layers"
+    print("Load model parameters for initializing first x layers")
     resume_metadata = np.load(config.pre_init_path)
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'][-len(all_excluded_params):])
 
@@ -145,10 +151,9 @@ config.data_loader.load_train()
 
 if hasattr(config, 'resume_path'):
     config.data_loader.set_params(resume_metadata['data_loader_params'])
-else:
-    config.data_loader.estimate_params() # important! this takes care of zmuv parameter estimation etc.
 
 
+### TODO: make sure this works with the generators I provide
 if hasattr(config, 'create_train_gen'):
     create_train_gen = config.create_train_gen
 else:
@@ -164,7 +169,8 @@ if hasattr(config, 'create_eval_train_gen'):
 else:
     create_eval_train_gen = lambda: config.data_loader.create_fixed_gen(config.data_loader.images_train, augment=False)
 
-
+### got to here.
+    
 print("...Train model")
 start_time = time.time()
 prev_time = start_time

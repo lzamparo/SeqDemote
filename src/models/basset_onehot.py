@@ -25,7 +25,6 @@ learning_rate_schedule = {
 
 validate_every = 20
 save_every = 20
-
 data_loader = load.DNaseDataLoader() # do I need to specify chunks, chunk size here?
 
 #data_loader = load.ZmuvRescaledDataLoader(estimate_scale=estimate_scale, num_chunks_train=num_chunks_train,
@@ -69,24 +68,24 @@ BatchNormLayer = nn.layers.BatchNormLayer
 
 def build_model():
 
-    l0 = nn.layers.InputLayer((batch_size, 1, data_rows, data_cols))
-    l1a = Conv2DLayer(l0, num_filters=300, filter_size=(19, 1), border_mode="same", W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))
+    l1a = Conv2DLayer(l0, num_filters=300, filter_size=(1, 19), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
-    l1d = MaxPool2DLayer(l1c, pool_size=(3, 1), stride=(3, 1))
+    l1d = MaxPool2DLayer(l1c, pool_size=(1, 3), stride=(1, 3))
 
-    l2a = Conv2DLayer(l1d, num_filters=200, filter_size=(11, 1), border_mode="same", W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l2a = Conv2DLayer(l1d, num_filters=200, filter_size=(1, 11), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
     l2c = nn.layers.NonlinearityLayer(l2b)
-    l2d = MaxPool2DLayer(l2c, pool_size=(4, 1), strides=(4, 1))
+    l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
 
-    l3a = Conv2DLayer(l2c, num_filters=200, filter_size=(7, 1), border_mode="same", W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l3a = Conv2DLayer(l2d, num_filters=200, filter_size=(1, 7), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l3b = BatchNormLayer(l3a)
     l3c = nn.layers.NonlinearityLayer(l3b)
-    l3d = MaxPool2DLayer(l3c, pool_size=(4, 1), strides=(4, 1))
+    l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 4))
     
     ### output dims of l3d should be (n_batches, 100, 10)
-    #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,1000)) ## maybe I want a flattening layer here instead?
+    #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,2000)) ## produces the same output shape, and without the need to specify the shape.
     l4a = nn.layers.FlattenLayer(l3d)
     l4b = nn.layers.DenseLayer(l4a, 1000)
     l4c = BatchNormLayer(l4b)
