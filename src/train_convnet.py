@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use('agg')
 import pylab as plt
 
-import data
+import generators
 import utils
 import buffering
 

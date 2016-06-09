@@ -5,11 +5,11 @@ import theano.tensor as T
 
 import lasagne as nn
 
-import data
+import generators
 import load 
 
-data_rows = 4
-data_cols = 600
+data_rows = 4 # probably don't need this param specified here
+data_cols = 600 # probably don't need this param specified here
 
 batch_size = 128
 chunk_size = 4096
@@ -19,13 +19,13 @@ weight_norm = 7  ### called after each parameter update, during training, use la
 
 learning_rate_schedule = {
     0: 0.002,
-    700: 0.0003,
-    800: 0.00003,
+    50: 0.0003,
+    100: 0.00003,
 }
 
 validate_every = 20
 save_every = 20
-data_loader = load.DNaseDataLoader() # do I need to specify chunks, chunk size here?
+data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
 
 #data_loader = load.ZmuvRescaledDataLoader(estimate_scale=estimate_scale, num_chunks_train=num_chunks_train,
     #patch_size=patch_size, chunk_size=chunk_size, augmentation_params=augmentation_params,

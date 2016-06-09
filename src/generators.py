@@ -1,14 +1,12 @@
 import os
 import numpy as np
 
-import multiprocessing as mp
-
 ### Possible data augmentation schemes by subsequence plucking, and kmerization of different varieties
 
 default_augmentation_params = {
     'kmerize': 1,
-    'subsequence_range': (-500, 500),
-    'subsequence_length': 500,
+    'subsequence_range': (-300, 300),
+    'subsequence_length': 600,
     'do_subsequences': False,
 }
 
@@ -29,23 +27,18 @@ subsequence_augmentation_params = {
 
 ### Data provider generators
 
-def get_h5_handle(path):
-    """
-    Get the h5 handle to the
-    """
-    return h5py.File(path)
-
-
 def train_sequence_gen(sequences, labels, chunk_size=4096, num_chunks=458, rng=np.random):
     ''' Given training data array ref, build and return a generator for one-hot encoded training sequence data '''
-    for n in xrange(num_chunks):
+    for n in range(num_chunks):
         indices = rng.randint(0, len(sequences), chunk_size)
         
-        sequences_rows = sequences.shape[2]
+        sequences_rows = sequences.shape[1]
         sequences_cols = sequences.shape[3]
         
-        chunk_x = np.zeros((chunk_size, sequences_rows, sequences_cols), dtype='float32')
-        chunk_y = np.zeros((chunk_size,), dtype='float32')
+        labels_output_shape = labels.shape[1]
+        
+        chunk_x = np.zeros((chunk_size, sequences_rows, 1, sequences_cols), dtype='float32')
+        chunk_y = np.zeros((chunk_size,labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
             chunk_x[k] = sequences[indices[k]]
@@ -53,7 +46,6 @@ def train_sequence_gen(sequences, labels, chunk_size=4096, num_chunks=458, rng=n
             
         yield chunk_x, chunk_y
     
-
 def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks=458, rng=np.random):
     ''' Given training data array ref, build and return a generator for one-hot encoded kmerized training sequence data '''
     pass
