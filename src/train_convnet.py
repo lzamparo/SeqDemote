@@ -18,8 +18,8 @@ matplotlib.use('agg')
 import pylab as plt
 
 import generators
-import utils
-import buffering
+from utils import accounting
+from utils import train_utils
 
 from subprocess import Popen
 
@@ -33,12 +33,10 @@ spec = importlib.util.spec_from_file_location(model_config, model_path_name)
 model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
-
-### TODO: useful, but only for when training is ramped up.
-#expid = utils.generate_expid(config_name)
+expid = accounting.generate_expid(config_name)
 #metadata_tmp_path = "/var/tmp/%s.pkl" % expid
 #metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
-#print("Experiment ID: ", expid)
+print("Experiment ID: ", expid)
 
 print("...Build model")
 model = model_module.build_model()
@@ -122,7 +120,7 @@ if hasattr(config, 'resume_path'):
     chunks_train_idcs = range(start_chunk_idx, config.num_chunks_train)
 
     # set lr to the correct value
-    current_lr = np.float32(utils.current_learning_rate(learning_rate_schedule, start_chunk_idx))
+    current_lr = np.float32(train_utils.current_learning_rate(learning_rate_schedule, start_chunk_idx))
     print("...setting learning rate to {0:.7f}.".format(current_lr))
     learning_rate.set_value(current_lr)
     losses_train = resume_metadata['losses_train']
@@ -157,124 +155,124 @@ if hasattr(config, 'resume_path'):
 if hasattr(config, 'create_train_gen'):
     create_train_gen = config.create_train_gen
 else:
-    create_train_gen = lambda: config.data_loader.create_random_gen(config.data_loader.images_train, config.data_loader.labels_train)
+    create_train_gen = lambda: config.data_loader.create_batch_gen()
 
-if hasattr(config, 'create_eval_valid_gen'):
-    create_eval_valid_gen = config.create_eval_valid_gen
+if hasattr(config, 'create_valid_gen'):
+    create_valid_gen = config.create_valid_gen
 else:
-    create_eval_valid_gen = lambda: config.data_loader.create_fixed_gen(config.data_loader.images_valid, augment=False)
-
-if hasattr(config, 'create_eval_train_gen'):
-    create_eval_train_gen = config.create_eval_train_gen
-else:
-    create_eval_train_gen = lambda: config.data_loader.create_fixed_gen(config.data_loader.images_train, augment=False)
+    create_valid_gen = lambda: config.data_loader.create_valid_gen()
 
 ### got to here.
+
+if hasattr(config, 'num_epochs'):
+    num_epochs = config.num_epochs
+else:
+    num_epochs = 15
+
     
-print("...Train model")
+print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
 prev_time = start_time
 
 copy_process = None
-
 num_batches_chunk = config.chunk_size // config.batch_size
 
-for e, (xs_chunk, y_chunk) in izip(chunks_train_idcs, create_train_gen()):
-    print "Chunk %d/%d" % (e + 1, config.num_chunks_train)
+### for number of epochs
+for epoch in range(num_epochs):
 
-    if e in learning_rate_schedule:
-        lr = np.float32(learning_rate_schedule[e])
-        print "  setting learning rate to %.7f" % lr
-        learning_rate.set_value(lr)
-
-    print "  load training data onto GPU"
-    for x_shared, x_chunk in zip(xs_shared, xs_chunk):
-        x_shared.set_value(x_chunk)
-    y_shared.set_value(y_chunk)
-
-    print "  batch SGD"
-    losses = []
-    for b in xrange(num_batches_chunk):
-        loss = iter_train(b)
-        if np.isnan(loss):
-            raise RuntimeError("NaN DETECTED.")
-        losses.append(loss)
-
-        
-    mean_train_loss = np.mean(losses)
-    print "  mean training loss:\t\t%.6f" % mean_train_loss
-    losses_train.append(mean_train_loss)
-
-    if ((e + 1) % config.validate_every) == 0:
-        print
-        print "Validating"
-        subsets = ["train", "valid"]
-        gens = [create_eval_train_gen, create_eval_valid_gen]
-        label_sets = [config.data_loader.labels_train, config.data_loader.labels_valid]
-        losses_eval = [losses_eval_train, losses_eval_valid]
-
-        for subset, create_gen, labels, losses in zip(subsets, gens, label_sets, losses_eval):
-            print "  %s set" % subset
+    for e, (xs_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
+        print("Chunk ", str(e + 1), " of ", config.num_chunks_train)
+    
+        if e in learning_rate_schedule:
+            lr = np.float32(learning_rate_schedule[e])
+            print("...setting learning rate to {0:.7f}.".format(lr))
+            learning_rate.set_value(lr)
+    
+        print("...load training data onto GPU")
+        for x_shared, x_chunk in zip(xs_shared, xs_chunk):
+            x_shared.set_value(x_chunk)
+        y_shared.set_value(y_chunk)
+    
+        print("...performing batch SGD")
+        losses = []
+        for b in xrange(num_batches_chunk):
+            loss = iter_train(b)
+            if np.isnan(loss):
+                raise RuntimeError("NaN DETECTED.")
+            losses.append(loss)
+    
+            
+        mean_train_loss = np.mean(losses)
+        print("Mean training loss:\t\t {0:.6f}.".format(mean_train_loss))
+        losses_train.append(mean_train_loss)
+    
+        ### Do we validate?
+        if ((epoch + 1) % config.validate_every) == 0:
+            print("Validating")
+            
+            gens = [create_valid_gen]
+            losses_eval = [losses_eval_valid]
+    
             outputs = []
-            for xs_chunk_eval, chunk_length_eval in create_gen():
-                num_batches_chunk_eval = int(np.ceil(chunk_length_eval / float(config.batch_size)))
+            labels = []
+            for xs_chunk_valid, y_chunk_valid in create_valid_gen():
+                num_batches_chunk_valid = xs_chunk_valid.shape[0] // config.batch_size
 
-                for x_shared, x_chunk_eval in zip(xs_shared, xs_chunk_eval):
+                for x_shared, x_chunk_eval in zip(xs_shared, xs_chunk_valid):
                     x_shared.set_value(x_chunk_eval)
 
                 outputs_chunk = []
-                for b in xrange(num_batches_chunk_eval):
+                for b in xrange(num_batches_chunk_valid):
                     out = compute_output(b)
                     outputs_chunk.append(out)
 
                 outputs_chunk = np.vstack(outputs_chunk)
-                outputs_chunk = outputs_chunk[:chunk_length_eval] # truncate to the right length
+                #outputs_chunk = outputs_chunk[:chunk_length_eval] # truncate to the right length
                 outputs.append(outputs_chunk)
+                labels.append(y_chunk_valid)
 
             outputs = np.vstack(outputs)
-            loss = utils.log_loss(outputs, labels)
-            acc = utils.accuracy(outputs, labels)
-            print "    loss:\t%.6f" % loss
-            print "    acc:\t%.2f%%" % (acc * 100)
-            print
-
-            losses.append(loss)
+            loss = train_utils.log_loss(outputs, labels)
+            acc = train_utils.accuracy(outputs, labels)
+            print("    validation loss:\t {0:.6f}.".format(loss))
+            print("    validation acc:\t {0:.2f}.".format(acc * 100))
+            
+            losses_eval.append(loss)
             del outputs
-
-
-    now = time.time()
-    time_since_start = now - start_time
-    time_since_prev = now - prev_time
-    prev_time = now
-    est_time_left = time_since_start * (float(config.num_chunks_train - (e + 1)) / float(e + 1 - chunks_train_idcs[0]))
-    eta = datetime.now() + timedelta(seconds=est_time_left)
-    eta_str = eta.strftime("%c")
-    print "  %s since start (%.2f s)" % (utils.hms(time_since_start), time_since_prev)
-    print "  estimated %s to go (ETA: %s)" % (utils.hms(est_time_left), eta_str)
-    print
-
-    if ((e + 1) % config.save_every) == 0:
-        print
-        print "Saving metadata, parameters"
-
-        with open(metadata_tmp_path, 'w') as f:
-            pickle.dump({
-                'configuration': config_name,
-                'experiment_id': expid,
-                'chunks_since_start': e,
-                'losses_train': losses_train,
-                'losses_eval_valid': losses_eval_valid,
-                'losses_eval_train': losses_eval_train,
-                'time_since_start': time_since_start,
-                'param_values': nn.layers.get_all_param_values(l_out), 
-                'data_loader_params': config.data_loader.get_params(),
-            }, f, pickle.HIGHEST_PROTOCOL)
-
-        # terminate the previous copy operation if it hasn't finished
-        if copy_process is not None:
-            copy_process.terminate()
-
-        copy_process = Popen(['cp', metadata_tmp_path, metadata_target_path])
-
-        print "  saved to %s, copying to %s" % (metadata_tmp_path, metadata_target_path)
-        print
+    
+    
+        now = time.time()
+        time_since_start = now - start_time
+        time_since_prev = now - prev_time
+        prev_time = now
+        est_time_left = time_since_start * (float(config.num_chunks_train - (e + 1)) / float(e + 1 - chunks_train_idcs[0]))
+        eta = datetime.now() + timedelta(seconds=est_time_left)
+        eta_str = eta.strftime("%c")
+        print(accounting.hms(time_since_start), " since start ", time_since_prev)
+        print(" estimated time remaining: ", eta_str)
+    
+        ### Do we save the model state?
+        if ((epoch + 1) % config.save_every) == 0:
+            print("Saving metadata, parameters")
+    
+            with open(metadata_tmp_path, 'w') as f:
+                pickle.dump({
+                    'configuration': config_name,
+                    'experiment_id': expid,
+                    'chunks_since_start': e,
+                    'losses_train': losses_train,
+                    'losses_eval_valid': losses_eval_valid,
+                    'losses_eval_train': losses_eval_train,
+                    'time_since_start': time_since_start,
+                    'param_values': nn.layers.get_all_param_values(l_out), 
+                    'data_loader_params': config.data_loader.get_params(),
+                }, f, pickle.HIGHEST_PROTOCOL)
+    
+            # terminate the previous copy operation if it hasn't finished
+            if copy_process is not None:
+                copy_process.terminate()
+    
+            copy_process = Popen(['cp', metadata_tmp_path, metadata_target_path])
+    
+            print("  saved to ", metadata_tmp_path, " copying to " metadata_target_path)
+            print

@@ -11,9 +11,12 @@ import load
 data_rows = 4 # probably don't need this param specified here
 data_cols = 600 # probably don't need this param specified here
 
+### training params
+
 batch_size = 128
 chunk_size = 4096
-num_chunks_train = 1880000 // 4096
+num_chunks_train = 1880000 // chunk_size
+num_chunks_valid = 70000 // chunk_size
 momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()
 
@@ -26,10 +29,6 @@ learning_rate_schedule = {
 validate_every = 20
 save_every = 20
 data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
-
-#data_loader = load.ZmuvRescaledDataLoader(estimate_scale=estimate_scale, num_chunks_train=num_chunks_train,
-    #patch_size=patch_size, chunk_size=chunk_size, augmentation_params=augmentation_params,
-    #augmentation_transforms_test=augmentation_transforms_test, validation_split_path=validation_split_path)
 
 ### The output of the basset model with fewer filters
 #(1): nn.SpatialConvolution(4 -> 150, 19x1) ** should be 300
@@ -68,7 +67,7 @@ BatchNormLayer = nn.layers.BatchNormLayer
 
 def build_model():
 
-    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))
+    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim should be chunk_size I reckon
     l1a = Conv2DLayer(l0, num_filters=300, filter_size=(1, 19), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)

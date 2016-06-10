@@ -102,7 +102,7 @@ class DNaseDataLoader(DataLoader):
         return buffering.buffered_gen_threaded(gen)    
             
     def create_valid_gen(self, chunk_size, num_chunks):
-        if not hasattr(self, 'train_in'):
+        if not hasattr(self, 'valid_in'):
             self.load_valid()
         if hasattr(self, 'chunk_size'):
             my_chunk_size = self.chunk_size
