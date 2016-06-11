@@ -110,6 +110,7 @@ def build_objective(l_ins, l_out):
 
     return nn.objectives.Objective(l_out, loss_function=loss)
 
-def build_updates(train_loss, all_params, learning_rate):
-    # TODO: does weight norm belong here maybe?
-    pass
+def build_updates(train_loss, all_params, learning_rate, momentum):   
+    updates_rms = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
+    updates = nn.updates.norm_constraint(updates_rms, weight_norm)
+    return updates
