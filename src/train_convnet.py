@@ -8,10 +8,9 @@ import time
 import os
 import sys
 import importlib.util
-import cPickle as pickle
+import pickle
 from datetime import datetime, timedelta
 import string
-from itertools import izip
 
 import matplotlib
 matplotlib.use('agg')
@@ -20,6 +19,7 @@ import pylab as plt
 import generators
 from utils import accounting
 from utils import train_utils
+from utils import network_repr
 
 from subprocess import Popen
 
@@ -33,7 +33,7 @@ spec = importlib.util.spec_from_file_location(model_config, model_path_name)
 model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
-expid = accounting.generate_expid(config_name)
+expid = accounting.generate_expid(model_config)
 #metadata_tmp_path = "/var/tmp/%s.pkl" % expid
 #metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
 print("Experiment ID: ", expid)
@@ -56,20 +56,49 @@ num_params = nn.layers.count_params(l_out)
 
 print("...number of parameters: ", num_params)
 print("...layer output shapes:")
-for layer in all_layers:
-    name = string.ljust(layer.__class__.__name__, 32)
-    print(name, layer.get_output_shape())
+print(network_repr.get_network_str(all_layers, get_network=False, incomings=True, 
+                                  outgoings=True))
+
+#Concretely, what looked like this before:
+#X = T.matrix('X')
+#y = T.ivector('y')
+#objective = lasagne.objectives.Objective(output_layer, loss_function=lasagne.objectives.categorical_crossentropy)
+#loss_train = objective.get_loss(X, target=y)
+#loss_eval = objective.get_loss(X, target=y, deterministic=True)
+
+#Can simply be written as:
+#output_train = lasagne.layers.get_output(output_layer, X)
+#loss_train = T.mean(T.nnet.categorical_crossentropy(output_train, y))
+#output_eval = lasagne.layers.get_output(output_layer, X, deterministic=True)
+#loss_eval = T.mean(T.nnet.categorical_crossentropy(output_eval, y))
+
+#Or, using the convenience functions:
+#output_train = lasagne.layers.get_output(output_layer, X)
+#loss_train = lasagne.objectives.aggregate(
+    #lasagne.objectives.categorical_crossentropy(output_train, y))
+#output_eval = lasagne.layers.get_output(output_layer, X, deterministic=True)
+#loss_train = lasagne.objectives.aggregate(
+    #lasagne.objectives.categorical_crossentropy(output_eval, y))
 
 
-print("...setting the objective ")
-if hasattr(config, 'build_objective'):
-    obj = config.build_objective(l_ins, l_out)
+print("...setting up shared vars, building the training & validation objectives ")
+
+train_output = l_out.get_output(deterministic=False)       ### do dropout in training 
+valid_output = l_out.get_output(deterministic=True)  ### no dropout for validation 
+
+idx = T.lscalar('idx')
+
+givens = {
+    obj.target_var: y_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size],
+}
+for l_in, x_shared in zip(l_ins, xs_shared):
+    givens[l_in.input_var] = x_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size]
+
+
+if hasattr(model_module, 'build_objective'):
+    obj = model_module.build_train_objective(l_ins, l_out)
 else:
-    obj = nn.objectives.Objective(l_out, loss_function=nn.objectives.binary_crossentropy(y, t))
-
-
-train_loss = obj.get_loss()
-output = l_out.get_output(deterministic=True)
+    train_loss = nn.objectives.aggregate(nn.objectives.binary_crossentropy(y, t))
 
 all_excluded_params = nn.layers.get_all_params(l_exclude)
 all_params = list(set(all_params) - set(all_excluded_params))
@@ -80,44 +109,37 @@ y_shared = nn.utils.shared_empty(dim=2)
 
 
 print("...setting the learning rate schedule ")
-if hasattr(config, 'learning_rate_schedule'):
-    learning_rate_schedule = config.learning_rate_schedule
+if hasattr(model_module, 'learning_rate_schedule'):
+    learning_rate_schedule = model_module.learning_rate_schedule
 else:
-    learning_rate_schedule = { 0: config.learning_rate }
+    learning_rate_schedule = { 0: model_module.learning_rate }
     
 learning_rate = theano.shared(np.float32(learning_rate_schedule[0]))
 
-idx = T.lscalar('idx')
-
-givens = {
-    obj.target_var: y_shared[idx*config.batch_size:(idx+1)*config.batch_size],
-}
-for l_in, x_shared in zip(l_ins, xs_shared):
-    givens[l_in.input_var] = x_shared[idx*config.batch_size:(idx+1)*config.batch_size]
 
 print("...setting the optimization scheme ")
-if hasattr(config, 'build_updates'):
-    updates = config.build_updates(train_loss, all_params, learning_rate)
+if hasattr(model_module, 'build_updates'):
+    updates = model_module.build_updates(train_loss, all_params, learning_rate)
 else:
-    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, config.momentum)
+    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, model_module.momentum)
 
-if hasattr(config, 'censor_updates'):
-    updates = config.censor_updates(updates, l_out)
+if hasattr(model_module, 'censor_updates'):
+    updates = model_module.censor_updates(updates, l_out)
 
 iter_train = theano.function([idx], train_loss, givens=givens, updates=updates)
 compute_output = theano.function([idx], output, givens=givens, on_unused_input="ignore")
 
 
-if hasattr(config, 'resume_path'):
+if hasattr(model_module, 'resume_path'):
     print("Load model parameters for resuming")
-    if hasattr(config, 'pre_init_path'):
+    if hasattr(model_module, 'pre_init_path'):
         print("lresume = lout")
         l_resume = l_out
-    resume_metadata = np.load(config.resume_path)
+    resume_metadata = np.load(model_module.resume_path)
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'])
 
     start_chunk_idx = resume_metadata['chunks_since_start'] + 1
-    chunks_train_idcs = range(start_chunk_idx, config.num_chunks_train)
+    chunks_train_idcs = range(start_chunk_idx, model_module.num_chunks_train)
 
     # set lr to the correct value
     current_lr = np.float32(train_utils.current_learning_rate(learning_rate_schedule, start_chunk_idx))
@@ -127,45 +149,45 @@ if hasattr(config, 'resume_path'):
     losses_eval_valid = resume_metadata['losses_eval_valid']
     losses_eval_train = resume_metadata['losses_eval_train']
     
-elif hasattr(config, 'pre_init_path'):
+elif hasattr(model_module, 'pre_init_path'):
     print("Load model parameters for initializing first x layers")
-    resume_metadata = np.load(config.pre_init_path)
+    resume_metadata = np.load(model_module.pre_init_path)
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'][-len(all_excluded_params):])
 
-    chunks_train_idcs = range(config.num_chunks_train)
+    chunks_train_idcs = range(model_module.num_chunks_train)
     losses_train = []
     losses_eval_valid = []
     losses_eval_train = []
     
 else:
-    chunks_train_idcs = range(config.num_chunks_train)
+    chunks_train_idcs = range(model_module.num_chunks_train)
     losses_train = []
     losses_eval_valid = []
     losses_eval_train = []
 
 
 print("...Load data")
-config.data_loader.load_train()
+model_module.data_loader.load_train()
 
-if hasattr(config, 'resume_path'):
-    config.data_loader.set_params(resume_metadata['data_loader_params'])
+if hasattr(model_module, 'resume_path'):
+    model_module.data_loader.set_params(resume_metadata['data_loader_params'])
 
 
 ### TODO: make sure this works with the generators I provide
-if hasattr(config, 'create_train_gen'):
-    create_train_gen = config.create_train_gen
+if hasattr(model_module, 'create_train_gen'):
+    create_train_gen = model_module.create_train_gen
 else:
-    create_train_gen = lambda: config.data_loader.create_batch_gen()
+    create_train_gen = lambda: model_module.data_loader.create_batch_gen()
 
-if hasattr(config, 'create_valid_gen'):
-    create_valid_gen = config.create_valid_gen
+if hasattr(model_module, 'create_valid_gen'):
+    create_valid_gen = model_module.create_valid_gen
 else:
-    create_valid_gen = lambda: config.data_loader.create_valid_gen()
+    create_valid_gen = lambda: model_module.data_loader.create_valid_gen()
 
 ### got to here.
 
-if hasattr(config, 'num_epochs'):
-    num_epochs = config.num_epochs
+if hasattr(model_module, 'num_epochs'):
+    num_epochs = model_module.num_epochs
 else:
     num_epochs = 15
 
@@ -175,13 +197,13 @@ start_time = time.time()
 prev_time = start_time
 
 copy_process = None
-num_batches_chunk = config.chunk_size // config.batch_size
+num_batches_chunk = model_module.chunk_size // model_module.batch_size
 
 ### for number of epochs
 for epoch in range(num_epochs):
 
     for e, (xs_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
-        print("Chunk ", str(e + 1), " of ", config.num_chunks_train)
+        print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train)
     
         if e in learning_rate_schedule:
             lr = np.float32(learning_rate_schedule[e])
@@ -207,7 +229,7 @@ for epoch in range(num_epochs):
         losses_train.append(mean_train_loss)
     
         ### Do we validate?
-        if ((epoch + 1) % config.validate_every) == 0:
+        if ((epoch + 1) % model_module.validate_every) == 0:
             print("Validating")
             
             gens = [create_valid_gen]
@@ -216,7 +238,7 @@ for epoch in range(num_epochs):
             outputs = []
             labels = []
             for xs_chunk_valid, y_chunk_valid in create_valid_gen():
-                num_batches_chunk_valid = xs_chunk_valid.shape[0] // config.batch_size
+                num_batches_chunk_valid = xs_chunk_valid.shape[0] // model_module.batch_size
 
                 for x_shared, x_chunk_eval in zip(xs_shared, xs_chunk_valid):
                     x_shared.set_value(x_chunk_eval)
@@ -245,14 +267,14 @@ for epoch in range(num_epochs):
         time_since_start = now - start_time
         time_since_prev = now - prev_time
         prev_time = now
-        est_time_left = time_since_start * (float(config.num_chunks_train - (e + 1)) / float(e + 1 - chunks_train_idcs[0]))
+        est_time_left = time_since_start * (float(model_module.num_chunks_train - (e + 1)) / float(e + 1 - chunks_train_idcs[0]))
         eta = datetime.now() + timedelta(seconds=est_time_left)
         eta_str = eta.strftime("%c")
         print(accounting.hms(time_since_start), " since start ", time_since_prev)
         print(" estimated time remaining: ", eta_str)
     
         ### Do we save the model state?
-        if ((epoch + 1) % config.save_every) == 0:
+        if ((epoch + 1) % model_module.save_every) == 0:
             print("Saving metadata, parameters")
     
             with open(metadata_tmp_path, 'w') as f:
@@ -265,7 +287,7 @@ for epoch in range(num_epochs):
                     'losses_eval_train': losses_eval_train,
                     'time_since_start': time_since_start,
                     'param_values': nn.layers.get_all_param_values(l_out), 
-                    'data_loader_params': config.data_loader.get_params(),
+                    'data_loader_params': model_module.data_loader.get_params(),
                 }, f, pickle.HIGHEST_PROTOCOL)
     
             # terminate the previous copy operation if it hasn't finished
@@ -274,5 +296,5 @@ for epoch in range(num_epochs):
     
             copy_process = Popen(['cp', metadata_tmp_path, metadata_target_path])
     
-            print("  saved to ", metadata_tmp_path, " copying to " metadata_target_path)
+            print("  saved to ", metadata_tmp_path, " copying to ", metadata_target_path)
             print

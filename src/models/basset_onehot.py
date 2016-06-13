@@ -67,7 +67,7 @@ BatchNormLayer = nn.layers.BatchNormLayer
 
 def build_model():
 
-    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim should be chunk_size I reckon
+    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
     l1a = Conv2DLayer(l0, num_filters=300, filter_size=(1, 19), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
@@ -102,13 +102,11 @@ def build_model():
 def build_objective(l_ins, l_out):
     # TODO: update for basset loss, regularization of params
     lambda_reg = 0.0005
-    params = nn.layers.get_all_non_bias_params(l_out)
+    params = nn.layers.get_all_params(l_out)
     reg_term = sum(T.sum(p**2) for p in params)
+    loss = nn.objectives.binary_crossentropy(y, t) + lambda_reg * reg_term ### y is model output, t is label from l_ins (if provided, else have to pass this as an arg)
+    return nn.objectives.aggregate(loss)
 
-    def loss(y, t):
-        return nn.objectives.binary_crossentropy(y, t) + lambda_reg * reg_term
-
-    return nn.objectives.Objective(l_out, loss_function=loss)
 
 def build_updates(train_loss, all_params, learning_rate, momentum):   
     updates_rms = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
