@@ -1,6 +1,5 @@
 import load
 
-
 from nose.tools import eq_, ok_
 import nose, functools
 import os

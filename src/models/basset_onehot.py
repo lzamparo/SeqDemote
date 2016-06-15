@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 import theano 
 import theano.tensor as T
@@ -96,19 +97,20 @@ def build_model():
     
     l6 = nn.layers.DenseLayer(l5c, num_units=164, nonlinearity=nn.nonlinearities.sigmoid)
 
-    return [l0], l6
+    return l0, l6
 
 
-def build_objective(l_ins, l_out):
+def build_objective(l_ins, l_out, targets, training_mode=True):
     # TODO: update for basset loss, regularization of params
     lambda_reg = 0.0005
     params = nn.layers.get_all_params(l_out)
     reg_term = sum(T.sum(p**2) for p in params)
-    loss = nn.objectives.binary_crossentropy(y, t) + lambda_reg * reg_term ### y is model output, t is label from l_ins (if provided, else have to pass this as an arg)
+    prediction = nn.layers.get_output(l_out, deterministic=training_mode)
+    loss = nn.objectives.binary_crossentropy(prediction, targets) + lambda_reg * reg_term ### y is model output, t is label from l_ins (if provided, else have to pass this as an arg)
     return nn.objectives.aggregate(loss)
 
 
 def build_updates(train_loss, all_params, learning_rate, momentum):   
-    updates_rms = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
-    updates = nn.updates.norm_constraint(updates_rms, weight_norm)
-    return updates
+    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
+    normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
+    return normed_updates

@@ -41,14 +41,14 @@ print("Experiment ID: ", expid)
 print("...Build model")
 model = model_module.build_model()
 if len(model) == 4:
-    l_ins, l_out, l_resume, l_exclude = model
+    l_in, l_out, l_resume, l_exclude = model
 elif len(model) == 3:
-    l_ins, l_out, l_resume = model
-    l_exclude = l_ins[0]
+    l_in, l_out, l_resume = model
+    l_exclude = l_in
 else:
-    l_ins, l_out = model
+    l_in, l_out = model
     l_resume = l_out
-    l_exclude = l_ins[0]
+    l_exclude = l_in
 
 
 all_layers = nn.layers.get_all_layers(l_out)
@@ -83,29 +83,28 @@ print(network_repr.get_network_str(all_layers, get_network=False, incomings=True
 
 print("...setting up shared vars, building the training & validation objectives ")
 
-train_output = l_out.get_output(deterministic=False)       ### do dropout in training 
-valid_output = l_out.get_output(deterministic=True)  ### no dropout for validation 
+x_shared = nn.utils.shared_empty(dim=len(l_in.output_shape)) 
+y_shared = nn.utils.shared_empty(dim=2)  # 
+t = nn.utils.shared_empty(dim=2)  # target shared var per batch
+
+valid_output = nn.layers.get_output(l_out, deterministic=True)  ### no dropout for validation 
 
 idx = T.lscalar('idx')
 
 givens = {
-    obj.target_var: y_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size],
+    t: y_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size],
+    l_in.input_var: x_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size],
 }
-for l_in, x_shared in zip(l_ins, xs_shared):
-    givens[l_in.input_var] = x_shared[idx*model_module.batch_size:(idx+1)*model_module.batch_size]
-
+   
 
 if hasattr(model_module, 'build_objective'):
-    obj = model_module.build_train_objective(l_ins, l_out)
+    train_loss = model_module.build_objective(l_in, l_out, t, training_mode=True)
 else:
-    train_loss = nn.objectives.aggregate(nn.objectives.binary_crossentropy(y, t))
+    train_loss = nn.objectives.aggregate(nn.objectives.binary_crossentropy(l_out, t))
 
 all_excluded_params = nn.layers.get_all_params(l_exclude)
+all_params = nn.layers.get_all_params(l_out)
 all_params = list(set(all_params) - set(all_excluded_params))
-
-input_ndims = [len(l_in.get_output_shape()) for l_in in l_ins]
-xs_shared = [nn.utils.shared_empty(dim=ndim) for ndim in input_ndims]
-y_shared = nn.utils.shared_empty(dim=2)
 
 
 print("...setting the learning rate schedule ")
@@ -119,15 +118,15 @@ learning_rate = theano.shared(np.float32(learning_rate_schedule[0]))
 
 print("...setting the optimization scheme ")
 if hasattr(model_module, 'build_updates'):
-    updates = model_module.build_updates(train_loss, all_params, learning_rate)
+    updates = model_module.build_updates(train_loss, all_params, learning_rate, model_module.momentum)
 else:
-    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, model_module.momentum)
+    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, 0.9)
 
 if hasattr(model_module, 'censor_updates'):
     updates = model_module.censor_updates(updates, l_out)
 
 iter_train = theano.function([idx], train_loss, givens=givens, updates=updates)
-compute_output = theano.function([idx], output, givens=givens, on_unused_input="ignore")
+compute_output = theano.function([idx], valid_output, givens=givens, on_unused_input="ignore")
 
 
 if hasattr(model_module, 'resume_path'):
@@ -211,7 +210,7 @@ for epoch in range(num_epochs):
             learning_rate.set_value(lr)
     
         print("...load training data onto GPU")
-        for x_shared, x_chunk in zip(xs_shared, xs_chunk):
+        for x_shared, x_chunk in zip(x_shared, xs_chunk):
             x_shared.set_value(x_chunk)
         y_shared.set_value(y_chunk)
     
@@ -240,7 +239,7 @@ for epoch in range(num_epochs):
             for xs_chunk_valid, y_chunk_valid in create_valid_gen():
                 num_batches_chunk_valid = xs_chunk_valid.shape[0] // model_module.batch_size
 
-                for x_shared, x_chunk_eval in zip(xs_shared, xs_chunk_valid):
+                for x_shared, x_chunk_eval in zip(x_shared, xs_chunk_valid):
                     x_shared.set_value(x_chunk_eval)
 
                 outputs_chunk = []
