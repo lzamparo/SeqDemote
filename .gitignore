@@ -10,3 +10,4 @@ data/invitro/hNRs/*.rar
 data/invitro/hbZIPs/*.rar
 data/models/*.th
 src/.ipynb_checkpoints
+src/models/checkpoints/*.pkl

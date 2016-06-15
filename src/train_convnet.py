@@ -34,8 +34,7 @@ model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
 expid = accounting.generate_expid(model_config)
-#metadata_tmp_path = "/var/tmp/%s.pkl" % expid
-#metadata_target_path = os.path.join(os.getcwd(), "metadata/%s.pkl" % expid)
+metadata_tmp_path = os.path.join(model_path_name, "checkpoints", expid + ".pkl")
 print("Experiment ID: ", expid)
 
 print("...Build model")
@@ -58,27 +57,6 @@ print("...number of parameters: ", num_params)
 print("...layer output shapes:")
 print(network_repr.get_network_str(all_layers, get_network=False, incomings=True, 
                                   outgoings=True))
-
-#Concretely, what looked like this before:
-#X = T.matrix('X')
-#y = T.ivector('y')
-#objective = lasagne.objectives.Objective(output_layer, loss_function=lasagne.objectives.categorical_crossentropy)
-#loss_train = objective.get_loss(X, target=y)
-#loss_eval = objective.get_loss(X, target=y, deterministic=True)
-
-#Can simply be written as:
-#output_train = lasagne.layers.get_output(output_layer, X)
-#loss_train = T.mean(T.nnet.categorical_crossentropy(output_train, y))
-#output_eval = lasagne.layers.get_output(output_layer, X, deterministic=True)
-#loss_eval = T.mean(T.nnet.categorical_crossentropy(output_eval, y))
-
-#Or, using the convenience functions:
-#output_train = lasagne.layers.get_output(output_layer, X)
-#loss_train = lasagne.objectives.aggregate(
-    #lasagne.objectives.categorical_crossentropy(output_train, y))
-#output_eval = lasagne.layers.get_output(output_layer, X, deterministic=True)
-#loss_train = lasagne.objectives.aggregate(
-    #lasagne.objectives.categorical_crossentropy(output_eval, y))
 
 
 print("...setting up shared vars, building the training & validation objectives ")
@@ -145,8 +123,8 @@ if hasattr(model_module, 'resume_path'):
     print("...setting learning rate to {0:.7f}.".format(current_lr))
     learning_rate.set_value(current_lr)
     losses_train = resume_metadata['losses_train']
-    losses_eval_valid = resume_metadata['losses_eval_valid']
-    losses_eval_train = resume_metadata['losses_eval_train']
+    losses_valid_log = resume_metadata['losses_eval_valid']
+    losses_valid_auc = resume_metadata['losses_eval_train']
     
 elif hasattr(model_module, 'pre_init_path'):
     print("Load model parameters for initializing first x layers")
@@ -155,15 +133,16 @@ elif hasattr(model_module, 'pre_init_path'):
 
     chunks_train_idcs = range(model_module.num_chunks_train)
     losses_train = []
-    losses_eval_valid = []
-    losses_eval_train = []
+    losses_valid_log = []
+    losses_valid_auc = []
+    losses_valid_aupr = []
     
 else:
     chunks_train_idcs = range(model_module.num_chunks_train)
     losses_train = []
-    losses_eval_valid = []
-    losses_eval_train = []
-
+    losses_valid_log = []
+    losses_valid_auc = []
+    losses_valid_aupr = []
 
 print("...Load data")
 model_module.data_loader.load_train()
@@ -171,8 +150,6 @@ model_module.data_loader.load_train()
 if hasattr(model_module, 'resume_path'):
     model_module.data_loader.set_params(resume_metadata['data_loader_params'])
 
-
-### TODO: make sure this works with the generators I provide
 if hasattr(model_module, 'create_train_gen'):
     create_train_gen = model_module.create_train_gen
 else:
@@ -182,8 +159,6 @@ if hasattr(model_module, 'create_valid_gen'):
     create_valid_gen = model_module.create_valid_gen
 else:
     create_valid_gen = lambda: model_module.data_loader.create_valid_gen()
-
-### got to here.
 
 if hasattr(model_module, 'num_epochs'):
     num_epochs = model_module.num_epochs
@@ -198,10 +173,10 @@ prev_time = start_time
 copy_process = None
 num_batches_chunk = model_module.chunk_size // model_module.batch_size
 
-### for number of epochs
 for epoch in range(num_epochs):
 
-    for e, (xs_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
+    ### train in chunks
+    for e, (x_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
         print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train)
     
         if e in learning_rate_schedule:
@@ -210,13 +185,12 @@ for epoch in range(num_epochs):
             learning_rate.set_value(lr)
     
         print("...load training data onto GPU")
-        for x_shared, x_chunk in zip(x_shared, xs_chunk):
-            x_shared.set_value(x_chunk)
+        x_shared.set_value(x_chunk)
         y_shared.set_value(y_chunk)
     
         print("...performing batch SGD")
         losses = []
-        for b in xrange(num_batches_chunk):
+        for b in range(num_batches_chunk):
             loss = iter_train(b)
             if np.isnan(loss):
                 raise RuntimeError("NaN DETECTED.")
@@ -227,39 +201,38 @@ for epoch in range(num_epochs):
         print("Mean training loss:\t\t {0:.6f}.".format(mean_train_loss))
         losses_train.append(mean_train_loss)
     
-        ### Do we validate?
-        if ((epoch + 1) % model_module.validate_every) == 0:
-            print("Validating")
-            
-            gens = [create_valid_gen]
-            losses_eval = [losses_eval_valid]
-    
-            outputs = []
-            labels = []
-            for xs_chunk_valid, y_chunk_valid in create_valid_gen():
-                num_batches_chunk_valid = xs_chunk_valid.shape[0] // model_module.batch_size
+    ### Do we validate?
+    if ((epoch + 1) % model_module.validate_every) == 0:
+        print("Validating...")
+        
+        outputs = []
+        labels = []
+        for x_chunk_valid, y_chunk_valid in create_valid_gen():
+            num_batches_chunk_valid = x_chunk_valid.shape[0] // model_module.batch_size
 
-                for x_shared, x_chunk_eval in zip(x_shared, xs_chunk_valid):
-                    x_shared.set_value(x_chunk_eval)
+            x_shared.set_value(x_chunk_valid)
 
-                outputs_chunk = []
-                for b in xrange(num_batches_chunk_valid):
-                    out = compute_output(b)
-                    outputs_chunk.append(out)
+            outputs_chunk = []
+            for b in range(num_batches_chunk_valid):
+                out = compute_output(b)
+                outputs_chunk.append(out)
 
-                outputs_chunk = np.vstack(outputs_chunk)
-                #outputs_chunk = outputs_chunk[:chunk_length_eval] # truncate to the right length
-                outputs.append(outputs_chunk)
-                labels.append(y_chunk_valid)
+            outputs_chunk = np.vstack(outputs_chunk)
+            #outputs_chunk = outputs_chunk[:chunk_length_eval] # truncate to the right length
+            outputs.append(outputs_chunk)
+            labels.append(y_chunk_valid)
 
-            outputs = np.vstack(outputs)
-            loss = train_utils.log_loss(outputs, labels)
-            acc = train_utils.accuracy(outputs, labels)
-            print("    validation loss:\t {0:.6f}.".format(loss))
-            print("    validation acc:\t {0:.2f}.".format(acc * 100))
-            
-            losses_eval.append(loss)
-            del outputs
+        outputs = np.vstack(outputs)
+        loss = train_utils.log_loss(outputs, np.vstack(labels))
+        acc = train_utils.mt_accuracy(outputs, np.vstack(labels))
+        precision = train_utils.mt_precision(outputs, np.vstack(labels))
+        print("    validation loss:\t {0:.6f}.".format(loss))
+        print("    validation roc:\t {0:.2f}.".format(acc * 100))
+        print("    validation aupr:\t {0:.2f}".format(precision * 100))
+        losses_valid_log.append(loss)
+        losses_valid_auc.append(acc)
+        losses_valid_aupr.append(precision)
+        del outputs
     
     
         now = time.time()
@@ -282,18 +255,18 @@ for epoch in range(num_epochs):
                     'experiment_id': expid,
                     'chunks_since_start': e,
                     'losses_train': losses_train,
-                    'losses_eval_valid': losses_eval_valid,
-                    'losses_eval_train': losses_eval_train,
+                    'losses_eval_valid': losses_valid_log,
+                    'losses_eval_train': losses_valid_auc,
                     'time_since_start': time_since_start,
                     'param_values': nn.layers.get_all_param_values(l_out), 
                     'data_loader_params': model_module.data_loader.get_params(),
                 }, f, pickle.HIGHEST_PROTOCOL)
     
             # terminate the previous copy operation if it hasn't finished
-            if copy_process is not None:
-                copy_process.terminate()
+            #if copy_process is not None:
+            #    copy_process.terminate()
     
-            copy_process = Popen(['cp', metadata_tmp_path, metadata_target_path])
+            #copy_process = Popen(['cp', metadata_tmp_path, metadata_target_path])
     
-            print("  saved to ", metadata_tmp_path, " copying to ", metadata_target_path)
-            print
+            #print("  saved to ", metadata_tmp_path, " copying to ", metadata_target_path)
+            #print

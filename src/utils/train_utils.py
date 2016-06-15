@@ -1,6 +1,6 @@
 import numpy as np 
 import gzip
-
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 ### Log-loss calculating utils
 
@@ -33,12 +33,31 @@ def log_loss(y, t, eps=1e-15):
     losses = log_losses(y, t, eps)
     return np.mean(losses)
 
-def accuracy(y, t):
-    if t.ndim == 2:
-        t = np.argmax(t, axis=1)
-        
-    predictions = np.argmax(y, axis=1)
-    return np.mean(predictions == t)
+def mt_accuracy(y, t):
+    """ 
+    multi-task ROC: the un-weighted average of task ROC scores
+    """
+    if not y.shape == t.shape:
+        print("Error in AUC: shape mismatch for y: ", y.shape, " and t: ", t.shape)
+        return -1
+    rocs = []
+    for preds, targets in zip(y.transpose(), t.transpose()):
+        rocs.append(roc_auc_score(targets, preds))
+    
+    return np.mean(rocs)
+
+def mt_precision(y, t):
+    """
+    multi-task precision: the un-weighted average of task precision scores
+    """
+    if not y.shape == t.shape:
+        print("Error in precision: shape mismatch for y: ", y.shape, " and t: ", t.shape)
+        return -1
+    precisions = []
+    for preds, targets in zip(y.transpose(), t.transpose()):
+        precisions.append(average_precision_score(targets, preds))
+    
+    return np.mean(precisions)
 
 
 ### Manage the learning rate schedules

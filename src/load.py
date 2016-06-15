@@ -101,9 +101,9 @@ class DNaseDataLoader(DataLoader):
         gen = generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
         return buffering.buffered_gen_threaded(gen)    
             
-    def create_valid_gen(self, chunk_size, num_chunks):
+    def create_valid_gen(self, chunk_size=4096, num_chunks=17):
         if not hasattr(self, 'valid_in'):
-            self.load_valid()
+            self.load_validation()
         if hasattr(self, 'chunk_size'):
             my_chunk_size = self.chunk_size
         else:
