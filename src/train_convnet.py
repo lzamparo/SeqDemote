@@ -1,7 +1,6 @@
 import sys
 import os
 import time
-print("... DEBUG: THEANO_FLAGS is set to ", os.environ['THEANO_FLAGS']) 
 
 import numpy as np
 import theano
@@ -166,8 +165,7 @@ if hasattr(model_module, 'num_epochs'):
     num_epochs = model_module.num_epochs
 else:
     num_epochs = 15
-
-print("... DEBUG: THEANO_FLAGS is set to ", os.environ['THEANO_FLAGS'])    
+   
 print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
 prev_time = start_time
