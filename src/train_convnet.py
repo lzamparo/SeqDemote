@@ -1,12 +1,14 @@
+import sys
+import os
+import time
+print("... DEBUG: THEANO_FLAGS is set to ", os.environ['THEANO_FLAGS']) 
+
 import numpy as np
 import theano
 import theano.tensor as T
 
 import lasagne as nn
 
-import time
-import os
-import sys
 import importlib.util
 import pickle
 from datetime import datetime, timedelta
