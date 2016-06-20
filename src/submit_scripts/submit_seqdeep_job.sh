@@ -20,7 +20,7 @@
 #  GPUs are in 'exclusive' mode by default, but 'shared' keyword sets them to shared mode.
 #  docker: indicator that I want to execute on a node that can run docker. (optional for other ppl)
 #  gtxtitan: indicator that I want to execute on nodes that have this particular type of GPU (optional for other ppl)
-#PBS -l nodes=1:ppn=1:gpus=1:gtxtitan
+#PBS -l nodes=1:ppn=1:gpus=1
 #
 # export all my environment variables to the job
 #PBS -V
@@ -47,13 +47,10 @@ cd $PBS_O_WORKDIR
 # grab the device number of the GPU assigned to my job
 my_gpu=`cat $PBS_GPUFILE`
 my_device_num=`echo $my_gpu | cut -c ${#my_gpu}`
-my_device="/dev/nvidia"$my_device_num
+my_device="gpu"$my_device_num
 
-# DEBUG
-echo "Assigning device " $my_device "to /dev/nvidia0"
-
-# assign the device mapping
-devices="--device /dev/nvidiactl:/dev/nvidiactl --device /dev/nvidia-uvm:/dev/nvidia-uvm --device $my_device:/dev/nvidia0"
+# Set THEANO_FLAGS string
+echo "Got assigned GPU " $my_device 
 
 cd ~/projects/SeqDemote/src
-python train_convnet.py basset_onehot.py
+THEANO_FLAGS='device=$my_device' python train_convnet.py basset_onehot.py
