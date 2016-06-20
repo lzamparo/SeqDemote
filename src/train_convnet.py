@@ -165,7 +165,7 @@ if hasattr(model_module, 'num_epochs'):
 else:
     num_epochs = 15
 
-print("... preparing to train on device ", theano.config.device)    
+print("... DEBUG: THEANO_FLAGS is set to ", os.environ['THEANO_FLAGS'])    
 print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
 prev_time = start_time
