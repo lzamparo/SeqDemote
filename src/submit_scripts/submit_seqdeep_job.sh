@@ -51,6 +51,7 @@ my_device="gpu"$my_device_num
 
 # Set THEANO_FLAGS string
 echo "Got assigned GPU " $my_device 
+export THEANO_FLAGS="device=$my_device" 
 
 cd ~/projects/SeqDemote/src
-THEANO_FLAGS='device=$my_device' python train_convnet.py basset_onehot.py
+python train_convnet.py basset_onehot.py
