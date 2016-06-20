@@ -165,7 +165,7 @@ if hasattr(model_module, 'num_epochs'):
 else:
     num_epochs = 15
 
-    
+print("... preparing to train on device ", theano.config.device)    
 print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
 prev_time = start_time
@@ -184,7 +184,7 @@ for epoch in range(num_epochs):
             print("...setting learning rate to {0:.7f}.".format(lr))
             learning_rate.set_value(lr)
     
-        print("...load training data onto GPU")
+        print("...load training data onto device")
         x_shared.set_value(x_chunk)
         y_shared.set_value(y_chunk)
     
