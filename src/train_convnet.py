@@ -5,6 +5,7 @@ import time
 import numpy as np
 import theano
 import theano.tensor as T
+from theano.compile.nanguardmode import NanGuardMode
 
 import lasagne as nn
 
@@ -104,7 +105,7 @@ else:
 if hasattr(model_module, 'censor_updates'):
     updates = model_module.censor_updates(updates, l_out)
 
-iter_train = theano.function([idx], train_loss, givens=givens, updates=updates)
+iter_train = theano.function([idx], train_loss, givens=givens, updates=updates, mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True))
 compute_output = theano.function([idx], valid_output, givens=givens, on_unused_input="ignore")
 
 
@@ -178,7 +179,8 @@ for epoch in range(num_epochs):
     ### train in chunks
     for e, (x_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
         print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train)
-    
+        chunk_start_time = time.time()
+        
         if e in learning_rate_schedule:
             lr = np.float32(learning_rate_schedule[e])
             print("...setting learning rate to {0:.7f}.".format(lr))
@@ -200,6 +202,8 @@ for epoch in range(num_epochs):
         mean_train_loss = np.mean(losses)
         print("Mean training loss:\t\t {0:.6f}.".format(mean_train_loss))
         losses_train.append(mean_train_loss)
+        chunk_end_time = time.time()
+        print("Training for chunk ", e, " took ", chunk_end_time - chunk_start_time, "s")
     
     ### Do we validate?
     if ((epoch + 1) % model_module.validate_every) == 0:
