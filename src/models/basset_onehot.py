@@ -103,8 +103,10 @@ def build_model():
 def build_objective(l_ins, l_out, targets, training_mode=True):
     # TODO: update for basset loss, regularization of params
     lambda_reg = 0.0005
-    params = nn.layers.get_all_params(l_out)
-    reg_term = sum(T.sum(p**2) for p in params)
+    params = nn.layers.get_all_params(l_out, regularizable=True)
+    reg_term = nn.regularization.regularize_layer_params(l_out, nn.regularization.l2, tags={'regularizable': True})
+    #reg_term = sum(T.sum(p**2) for p in params) ### this is the line causing the NaNs.  I should just kill this, and regularize in a safer way via other Lasagne methods which are more stable numerically.
+    
     prediction = nn.layers.get_output(l_out, deterministic=training_mode)
     loss = nn.objectives.binary_crossentropy(prediction, targets) + lambda_reg * reg_term ### y is model output, t is label from l_ins (if provided, else have to pass this as an arg)
     return nn.objectives.aggregate(loss)

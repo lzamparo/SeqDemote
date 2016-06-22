@@ -61,7 +61,7 @@ print(network_repr.get_network_str(all_layers, get_network=False, incomings=True
                                   outgoings=True))
 
 
-print("...setting up shared vars, building the training & validation objectives ")
+print("...setting up shared vars, building the training & validation objectives ", flush=True)
 
 x_shared = nn.utils.shared_empty(dim=len(l_in.output_shape)) 
 y_shared = nn.utils.shared_empty(dim=2)  # 
@@ -146,7 +146,7 @@ else:
     losses_valid_auc = []
     losses_valid_aupr = []
 
-print("...Load data")
+print("...Load data", flush=True)
 model_module.data_loader.load_train()
 
 if hasattr(model_module, 'resume_path'):
@@ -178,7 +178,7 @@ for epoch in range(num_epochs):
 
     ### train in chunks
     for e, (x_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
-        print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train)
+        print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train, flush=True)
         chunk_start_time = time.time()
         
         if e in learning_rate_schedule:
@@ -203,7 +203,7 @@ for epoch in range(num_epochs):
         print("Mean training loss:\t\t {0:.6f}.".format(mean_train_loss))
         losses_train.append(mean_train_loss)
         chunk_end_time = time.time()
-        print("Training for chunk ", e, " took ", chunk_end_time - chunk_start_time, "s")
+        print("Training for chunk ", e, " took ", chunk_end_time - chunk_start_time, "s", flush=True)
     
     ### Do we validate?
     if ((epoch + 1) % model_module.validate_every) == 0:
