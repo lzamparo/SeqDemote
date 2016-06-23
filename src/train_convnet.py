@@ -105,7 +105,8 @@ else:
 if hasattr(model_module, 'censor_updates'):
     updates = model_module.censor_updates(updates, l_out)
 
-iter_train = theano.function([idx], train_loss, givens=givens, updates=updates, mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True))
+#iter_train = theano.function([idx], train_loss, givens=givens, updates=updates, mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True))
+iter_train = theano.function([idx], train_loss, givens=givens, updates=updates)
 compute_output = theano.function([idx], valid_output, givens=givens, on_unused_input="ignore")
 
 
