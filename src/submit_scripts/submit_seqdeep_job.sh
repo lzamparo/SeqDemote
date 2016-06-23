@@ -20,7 +20,8 @@
 #  GPUs are in 'exclusive' mode by default, but 'shared' keyword sets them to shared mode.
 #  docker: indicator that I want to execute on a node that can run docker. (optional for other ppl)
 #  gtxtitan: indicator that I want to execute on nodes that have this particular type of GPU (optional for other ppl)
-#PBS -l nodes=1:ppn=1:gpus=1
+#  exclusive: Theano cannot share well, so ask for a whole GPU
+#PBS -l nodes=1:ppn=1:gpus=1:exclusive
 #
 # export all my environment variables to the job
 #PBS -V
