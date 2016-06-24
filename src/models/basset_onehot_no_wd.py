@@ -27,8 +27,8 @@ learning_rate_schedule = {
     100: 0.00003,
 }
 
-validate_every = 5
-save_every = 10
+validate_every = 1
+save_every = 5
 data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
 
 ### The output of the basset model with fewer filters
