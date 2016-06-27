@@ -64,6 +64,7 @@ data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size,
 # Refs to lasagne conv layers
 Conv2DLayer = nn.layers.Conv2DLayer
 MaxPool2DLayer = nn.layers.MaxPool2DLayer
+
 BatchNormLayer = nn.layers.BatchNormLayer
 
 def build_model():
@@ -101,18 +102,15 @@ def build_model():
 
 
 def build_objective(l_ins, l_out, targets, training_mode=True):
-    # TODO: update for basset loss, regularization of params
     lambda_reg = 0.0005
     params = nn.layers.get_all_params(l_out, regularizable=True)
     reg_term = nn.regularization.regularize_layer_params(l_out, nn.regularization.l2, tags={'regularizable': True})
-    #reg_term = sum(T.sum(p**2) for p in params) ### this is the line causing the NaNs.  I should just kill this, and regularize in a safer way via other Lasagne methods which are more stable numerically.
-    
     prediction = nn.layers.get_output(l_out, deterministic=training_mode)
-    loss = nn.objectives.binary_crossentropy(prediction, targets) + lambda_reg * reg_term ### y is model output, t is label from l_ins (if provided, else have to pass this as an arg)
+    loss = nn.objectives.binary_crossentropy(prediction, targets) + lambda_reg * reg_term 
     return nn.objectives.aggregate(loss)
 
 
 def build_updates(train_loss, all_params, learning_rate, momentum):   
     updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
-    normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
-    return normed_updates
+    #normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
+    return updates

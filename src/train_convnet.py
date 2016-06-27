@@ -178,9 +178,10 @@ num_batches_chunk = model_module.chunk_size // model_module.batch_size
 for epoch in range(num_epochs):
 
     ### train in chunks
+    epoch_train_loss = []
+    epoch_start_time = time.time()
     for e, (x_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
         print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train, flush=True)
-        chunk_start_time = time.time()
         
         if e in learning_rate_schedule:
             lr = np.float32(learning_rate_schedule[e])
@@ -198,13 +199,14 @@ for epoch in range(num_epochs):
             if np.isnan(loss):
                 raise RuntimeError("NaN DETECTED.")
             losses.append(loss)
-    
-            
+        
         mean_train_loss = np.mean(losses)
-        print("Mean training loss:\t\t {0:.6f}.".format(mean_train_loss))
-        losses_train.append(mean_train_loss)
-        chunk_end_time = time.time()
-        print("Training for chunk ", e, " took ", chunk_end_time - chunk_start_time, "s", flush=True)
+        epoch_train_loss.append(mean_train_loss)
+        
+    epoch_end_time = time.time()
+    losses_train.append(np.mean(epoch_train_loss))
+    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(epoch_train_loss)))
+    print("Training for epoch ", epoch, " took ", epoch_end_time - epoch_start_time, "s", flush=True)
     
     ### Do we validate?
     if ((epoch + 1) % model_module.validate_every) == 0:
