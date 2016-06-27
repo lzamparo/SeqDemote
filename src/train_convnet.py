@@ -36,7 +36,7 @@ model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
 expid = accounting.generate_expid(model_config)
-metadata_tmp_path = os.path.join(model_path_name, "checkpoints", expid + ".pkl")
+metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints", expid + ".pkl")
 print("Experiment ID: ", expid)
 
 print("...Build model")
