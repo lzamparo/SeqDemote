@@ -9,8 +9,8 @@ import lasagne as nn
 import generators
 import load 
 
-data_rows = 4 # probably don't need this param specified here
-data_cols = 600 # probably don't need this param specified here
+data_rows = 64 # probably don't need this param specified here
+data_cols = 598 # probably don't need this param specified here
 
 ### training params
 
@@ -20,6 +20,7 @@ num_chunks_train = 1880000 // chunk_size
 num_chunks_valid = 70000 // chunk_size
 momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()
+dp = '/cbio/cllab/nobackup/zamparol/SeqDeep/data/encode_roadmap_3mer.h5'
 
 learning_rate_schedule = {
     0: 0.002,
@@ -29,7 +30,7 @@ learning_rate_schedule = {
 
 validate_every = 1
 save_every = 5
-data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
+data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train, data_path=dp) 
 
 ### The output of the basset model with fewer filters
 #(1): nn.SpatialConvolution(4 -> 150, 19x1) ** should be 300
@@ -58,12 +59,12 @@ data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size,
     
     
 # Refs to dnn layers
-Conv2DLayer = nn.layers.dnn.Conv2DDNNLayer
-MaxPool2DLayer = nn.layers.dnn.MaxPool2DDNNLayer
+#Conv2DLayer = nn.layers.dnn.Conv2DDNNLayer
+#MaxPool2DLayer = nn.layers.dnn.MaxPool2DDNNLayer
 
 # Refs to lasagne conv layers
-#Conv2DLayer = nn.layers.Conv2DLayer
-#MaxPool2DLayer = nn.layers.MaxPool2DLayer
+Conv2DLayer = nn.layers.Conv2DLayer
+MaxPool2DLayer = nn.layers.MaxPool2DLayer
 
 BatchNormLayer = nn.layers.BatchNormLayer
 
@@ -101,16 +102,13 @@ def build_model():
     return l0, l6
 
 
-def build_objective(l_ins, l_out, targets, training_mode=True):
-    lambda_reg = 0.0005
-    params = nn.layers.get_all_params(l_out, regularizable=True)
-    reg_term = nn.regularization.regularize_layer_params(l_out, nn.regularization.l2, tags={'regularizable': True})
+def build_objective(l_ins, l_out, targets, training_mode=False):
     prediction = nn.layers.get_output(l_out, deterministic=training_mode)
-    loss = nn.objectives.binary_crossentropy(prediction, targets) + lambda_reg * reg_term 
+    loss = nn.objectives.binary_crossentropy(prediction, targets)
     return nn.objectives.aggregate(loss)
 
 
 def build_updates(train_loss, all_params, learning_rate, momentum):   
     updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
-    #normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
+    normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
     return updates

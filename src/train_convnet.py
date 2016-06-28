@@ -5,7 +5,7 @@ import time
 import numpy as np
 import theano
 import theano.tensor as T
-from theano.compile.nanguardmode import NanGuardMode
+#from theano.compile.nanguardmode import NanGuardMode
 
 import lasagne as nn
 
@@ -64,7 +64,7 @@ print(network_repr.get_network_str(all_layers, get_network=False, incomings=True
 print("...setting up shared vars, building the training & validation objectives ", flush=True)
 
 x_shared = nn.utils.shared_empty(dim=len(l_in.output_shape)) 
-y_shared = nn.utils.shared_empty(dim=2)  # 
+y_shared = nn.utils.shared_empty(dim=2)   
 t = nn.utils.shared_empty(dim=2)  # target shared var per batch
 
 valid_output = nn.layers.get_output(l_out, deterministic=True)  ### no dropout for validation 
@@ -131,7 +131,7 @@ if hasattr(model_module, 'resume_path'):
     
 elif hasattr(model_module, 'pre_init_path'):
     print("Load model parameters for initializing first x layers")
-    resume_metadata = np.load(model_module.pre_init_path)
+    resume_metadata = pickle.load(model_module.pre_init_path)
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'][-len(all_excluded_params):])
 
     chunks_train_idcs = range(model_module.num_chunks_train)
@@ -181,18 +181,18 @@ for epoch in range(num_epochs):
     epoch_train_loss = []
     epoch_start_time = time.time()
     for e, (x_chunk, y_chunk) in zip(chunks_train_idcs, create_train_gen()):
-        print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train, flush=True)
+        #print("Chunk ", str(e + 1), " of ", model_module.num_chunks_train, flush=True)
         
         if e in learning_rate_schedule:
             lr = np.float32(learning_rate_schedule[e])
             print("...setting learning rate to {0:.7f}.".format(lr))
             learning_rate.set_value(lr)
     
-        print("...load training data onto device")
+        #print("...load training data onto device")
         x_shared.set_value(x_chunk)
         y_shared.set_value(y_chunk)
     
-        print("...performing batch SGD")
+        #print("...performing batch SGD")
         losses = []
         for b in range(num_batches_chunk):
             loss = iter_train(b)
@@ -258,9 +258,9 @@ for epoch in range(num_epochs):
     
             with open(metadata_tmp_path, 'w') as f:
                 pickle.dump({
-                    'configuration': config_name,
+                    'configuration': model_config,
                     'experiment_id': expid,
-                    'chunks_since_start': e,
+                    'chunks_since_start': epoch * model_module.num_chunks_train,
                     'losses_train': losses_train,
                     'losses_eval_valid': losses_valid_log,
                     'losses_eval_train': losses_valid_auc,
