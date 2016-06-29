@@ -56,14 +56,10 @@ data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size,
     #(22): nn.Linear(1000 -> 164)
     #(23): nn.Sigmoid
     
-    
-# Refs to dnn layers
-Conv2DLayer = nn.layers.dnn.Conv2DDNNLayer
-MaxPool2DLayer = nn.layers.dnn.MaxPool2DDNNLayer
 
 # Refs to lasagne conv layers
-#Conv2DLayer = nn.layers.Conv2DLayer
-#MaxPool2DLayer = nn.layers.MaxPool2DLayer
+Conv2DLayer = nn.layers.Conv2DLayer
+MaxPool2DLayer = nn.layers.MaxPool2DLayer
 
 BatchNormLayer = nn.layers.BatchNormLayer
 

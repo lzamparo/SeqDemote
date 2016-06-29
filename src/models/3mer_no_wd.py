@@ -32,35 +32,6 @@ validate_every = 1
 save_every = 5
 data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train, data_path=dp) 
 
-### The output of the basset model with fewer filters
-#(1): nn.SpatialConvolution(4 -> 150, 19x1) ** should be 300
-    #(2): nn.SpatialBatchNormalization
-    #(3): nn.ReLU
-    #(4): nn.SpatialMaxPooling(3,1,3,1)
-    #(5): nn.SpatialConvolution(150 -> 100, 11x1) ** should be 200
-    #(6): nn.SpatialBatchNormalization
-    #(7): nn.ReLU
-    #(8): nn.SpatialMaxPooling(4,1,4,1)
-    #(9): nn.SpatialConvolution(100 -> 100, 7x1) ** should be 200
-    #(10): nn.SpatialBatchNormalization
-    #(11): nn.ReLU
-    #(12): nn.SpatialMaxPooling(4,1,4,1)
-    #(13): nn.Reshape(1000)
-    #(14): nn.Linear(1000 -> 1000)
-    #(15): nn.BatchNormalization
-    #(16): nn.ReLU
-    #(17): nn.Dropout(0.300000)
-    #(18): nn.Linear(1000 -> 1000)
-    #(19): nn.BatchNormalization
-    #(20): nn.ReLU
-    #(21): nn.Dropout(0.300000)
-    #(22): nn.Linear(1000 -> 164)
-    #(23): nn.Sigmoid
-    
-    
-# Refs to dnn layers
-#Conv2DLayer = nn.layers.dnn.Conv2DDNNLayer
-#MaxPool2DLayer = nn.layers.dnn.MaxPool2DDNNLayer
 
 # Refs to lasagne conv layers
 Conv2DLayer = nn.layers.Conv2DLayer

@@ -256,18 +256,20 @@ for epoch in range(num_epochs):
         if ((epoch + 1) % model_module.save_every) == 0:
             print("Saving metadata, parameters")
     
-            with open(metadata_tmp_path, 'w') as f:
-                pickle.dump({
+            with open(metadata_tmp_path, 'wb') as f:
+                chunks_trained = epoch * model_module.num_chunks_train
+                save_dict = {
                     'configuration': model_config,
                     'experiment_id': expid,
-                    'chunks_since_start': epoch * model_module.num_chunks_train,
+                    'chunks_since_start': chunks_trained,
                     'losses_train': losses_train,
                     'losses_eval_valid': losses_valid_log,
                     'losses_eval_train': losses_valid_auc,
                     'time_since_start': time_since_start,
                     'param_values': nn.layers.get_all_param_values(l_out), 
-                    'data_loader_params': model_module.data_loader.get_params(),
-                }, f, pickle.HIGHEST_PROTOCOL)
+                    'data_loader_params': model_module.data_loader.get_params()
+                }
+                pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)
     
             # terminate the previous copy operation if it hasn't finished
             #if copy_process is not None:
