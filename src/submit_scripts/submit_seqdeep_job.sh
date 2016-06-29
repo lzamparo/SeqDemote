@@ -50,8 +50,14 @@ my_gpu=`cat $PBS_GPUFILE`
 my_device_num=`echo $my_gpu | cut -c ${#my_gpu}`
 my_device="gpu"$my_device_num
 
+# GPU assignment debugging info
+echo "echo CUDA_VISIBLE_DEVICES : " $CUDA_VISIBLE_DEVICES
+echo "cat PBS_GPUFILE : " `cat $PBS_GPUFILE`
+echo "Got assigned GPU " $my_device
+echo "nvidia-smi -q -d COMPUTE output : " 
+echo `nvidia-smi -q -d COMPUTE`
+
 # Set THEANO_FLAGS string
-echo "Got assigned GPU " $my_device 
 export THEANO_FLAGS="device=$my_device" 
 
 cd ~/projects/SeqDemote/src
