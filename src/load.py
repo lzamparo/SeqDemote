@@ -122,6 +122,43 @@ class DNaseDataLoader(DataLoader):
         gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen)    
         
+
+class KmerDataLoader(DataLoader):
+    
+    def __init(self, **kwargs):
+        DataLoader.__init__(self)
+        self.__dict__.update(kwargs)
+        if not hasattr(self, 'data_path'):
+            self.data_path = os.path.abspath('../data/DNase/encode_roadmap.h5')
+            
+        def create_batch_gen(self, chunk_size=4096, num_chunks=458):
+            if not hasattr(self, 'train_in'):
+                self.load_train()
+            if hasattr(self, 'chunk_size'):
+                my_chunk_size = self.chunk_size
+            else:
+                my_chunk_size = chunk_size
+            if hasattr(self, 'num_chunks_train'):
+                my_num_chunks = self.num_chunks_train
+            else:
+                my_num_chunks = num_chunks
+                
+            pass
+        
+        def create_valid_gen(self, chunk_size=4096, num_chunks=17):
+            if not hasattr(self, 'valid_in'):
+                self.load_validation()
+            if hasattr(self, 'chunk_size'):
+                my_chunk_size = self.chunk_size
+            else:
+                my_chunk_size = chunk_size
+            if hasattr(self, 'num_chunks_valid'):
+                my_num_chunks = self.num_chunks_valid
+            else:
+                my_num_chunks = num_chunks
+                
+            pass
+
 class RescaledDataLoader(DataLoader):
     def create_random_gen(self, images, labels):
         gen = generators.rescaled_patches_gen_augmented(images, labels, self.estimate_scale, patch_size=self.patch_size,

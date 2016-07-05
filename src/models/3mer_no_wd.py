@@ -1,5 +1,6 @@
 import numpy as np
 from collections import OrderedDict
+from utils.train_utils import log_lr_schedule
 
 import theano 
 import theano.tensor as T
@@ -22,11 +23,9 @@ momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()
 dp = '/cbio/cllab/nobackup/zamparol/SeqDeep/data/encode_roadmap_3mer.h5'
 
-learning_rate_schedule = {
-    0: 0.002,
-    50: 0.0003,
-    100: 0.00003,
-}
+# set schedule for learning rate decreases
+base_lr = 0.002
+learning_rate_schedule = log_lr_schedule(num_chunks_train, updates=4, base_lr)
 
 validate_every = 1
 save_every = 5

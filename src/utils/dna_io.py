@@ -6,7 +6,6 @@ import itertools
 
 import numpy as np
 import numpy.random as npr
-#import khmer
 from sklearn import preprocessing
 
 ################################################################################
@@ -165,9 +164,7 @@ def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=
         
     bases = ['A','C','G','T']
     kmers = [''.join(p) for p in itertools.product(bases, repeat=kmer_length)]
-    kmers_position = {kmers[i]: i for i in range(0, len(kmers))}
-    
-    
+    kmers_position = {kmers[i]: i for i in range(0, len(kmers))}  
     
     my_kmers = [seq[i:i+kmer_length] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
     seq_code = np.zeros((int(pow(4, kmer_length)), len(seq) - kmer_length + 1), dtype='uint8')    
@@ -488,6 +485,15 @@ def vecs2dna(seq_vecs):
     return seqs
 
 
+def decode_one_hot(seq_vecs):
+    '''
+    Input: 
+        one hot encoded vectors of shape (num_cases, 4, 1, len_seqs)
+    Output:
+        character string representation of decoded one-hot vectors
+    '''
+    decoder_dict = {np.array([])}
+    pass
 
 def kmer_vecs_to_dna(seq_vecs, k):
     '''

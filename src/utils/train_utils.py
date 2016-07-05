@@ -1,5 +1,6 @@
 import numpy as np 
 import gzip
+from collections import OrderedDict
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 ### Log-loss calculating utils
@@ -61,12 +62,24 @@ def mt_precision(y, t):
 
 
 ### Manage the learning rate schedules
+def log_lr_schedule(num_chunks_train, updates=4, base=0.002):
+    ls = np.logspace(0.0, np.round(np.log10(num_chunks_train)), num = updates)
+    changepts = ls.astype(int)
+    changepts[0] = 0
+    learning_rates = [base * np.float(np.power(10,-1.0 * i)) for i in range(len(ls))]
+
+    return OrderedDict(zip(changepts,learning_rates))
+
+def lin_lr_schedule(num_chunks_train, updates=15, base=0.002, cap=0.000002):
+    ls = np.linspace(0.0, updates * num_chunks_train, num = updates).astype(int)
+    changepts = ls.astype(int)
+    changepts[0] = 0
+    learning_rates = [np.maximum(base * np.float(np.power(10,-1.0 * i)), cap) for i in range(len(ls))]
+    
+    return OrderedDict(zip(changepts,learning_rates))
 
 def current_learning_rate(schedule, idx):
-    s = schedule.keys()
-    s.sort()
-    current_lr = schedule[0]
-    for i in s:
+    for i in schedule.keys():
         if idx >= i:
             current_lr = schedule[i]
 

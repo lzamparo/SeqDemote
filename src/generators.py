@@ -51,6 +51,10 @@ def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks
     pass
 
 
+#def distance(a, b):
+    #return sum(map(lambda (x, y): 0 if x == y else 1, zip(a, b)))
+
+
 ####  augmentation  ####
 #  None of the regular image augmentation methods will work for me, but what might work is to re-process the data with a much larger window set
 #  and then take random 600bp (or whatever window size) around the center of the peak.

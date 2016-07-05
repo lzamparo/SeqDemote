@@ -1,5 +1,6 @@
 import numpy as np
 from collections import OrderedDict
+from utils.train_utils import lin_lr_schedule
 
 import theano 
 import theano.tensor as T
@@ -22,11 +23,11 @@ momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()
 resume_path = '/cbio/cllab/home/zamparol/projects/SeqDemote/src/models/checkpoints/basset_onehot_no_wd.py-gpu-2-4.local-20160629-185436.pkl'
 
-learning_rate_schedule = {
-    0: 0.002,
-    50: 0.0003,
-    100: 0.00003,
-}
+# set schedule for learning rate decreases
+base_lr = 0.002
+learning_rate_schedule = lin_lr_schedule(num_chunks_train, base=0.002, cap=0.000002)
+
+learning_rate_schedule = OrderedDict(zip(changepts,learning_rates))
 
 validate_every = 1
 save_every = 5
