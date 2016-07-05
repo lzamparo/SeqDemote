@@ -116,7 +116,7 @@ if hasattr(model_module, 'resume_path'):
         print("lresume = lout")
         l_resume = l_out
     
-    with open(model_module.resume_path) as resume_file:
+    with open(model_module.resume_path, 'rb') as resume_file:
         resume_metadata = pickle.load(resume_file)
         
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'])
