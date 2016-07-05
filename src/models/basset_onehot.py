@@ -20,6 +20,7 @@ num_chunks_train = 1880000 // chunk_size
 num_chunks_valid = 70000 // chunk_size
 momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()
+resume_path = '/cbio/cllab/home/zamparol/projects/SeqDemote/src/models/checkpoints/basset_onehot.py-gpu-2-5.local-20160629-185410.pkl'
 
 learning_rate_schedule = {
     0: 0.002,

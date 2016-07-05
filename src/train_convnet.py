@@ -115,7 +115,10 @@ if hasattr(model_module, 'resume_path'):
     if hasattr(model_module, 'pre_init_path'):
         print("lresume = lout")
         l_resume = l_out
-    resume_metadata = np.load(model_module.resume_path)
+    
+    with open(model_module.resume_path) as resume_file:
+        resume_metadata = pickle.load(resume_file)
+        
     nn.layers.set_all_param_values(l_resume, resume_metadata['param_values'])
 
     start_chunk_idx = resume_metadata['chunks_since_start'] + 1
@@ -149,9 +152,6 @@ else:
 
 print("...Load data", flush=True)
 model_module.data_loader.load_train()
-
-if hasattr(model_module, 'resume_path'):
-    model_module.data_loader.set_params(resume_metadata['data_loader_params'])
 
 if hasattr(model_module, 'create_train_gen'):
     create_train_gen = model_module.create_train_gen
@@ -266,8 +266,7 @@ for epoch in range(num_epochs):
                     'losses_eval_valid': losses_valid_log,
                     'losses_eval_train': losses_valid_auc,
                     'time_since_start': time_since_start,
-                    'param_values': nn.layers.get_all_param_values(l_out), 
-                    'data_loader_params': model_module.data_loader.get_params()
+                    'param_values': nn.layers.get_all_param_values(l_out)
                 }
                 pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)
     
