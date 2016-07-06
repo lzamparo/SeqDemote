@@ -70,7 +70,7 @@ def log_lr_schedule(num_chunks_train, updates=4, base=0.02):
 
     return OrderedDict(zip(changepts,learning_rates))
 
-def lin_lr_schedule(num_chunks_train, updates=15, base=0.02, cap=0.0002):
+def lin_lr_schedule(num_chunks_train, base=0.02, cap=0.0002, updates=15):
     ls = np.linspace(0.0, updates * num_chunks_train, num = updates).astype(int)
     changepts = ls.astype(int)
     changepts[0] = 0

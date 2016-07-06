@@ -1,6 +1,6 @@
 import numpy as np
 from collections import OrderedDict
-from utils.train_utils import lin_lr_schedule
+from utils.train_utils import log_lr_schedule
 
 import theano 
 import theano.tensor as T
@@ -25,8 +25,8 @@ weight_norm = 7  ### called after each parameter update, during training, use la
 
 # set schedule for learning rate decreases
 base_lr = 0.02
-cap = 0.0002
-learning_rate_schedule = lin_lr_schedule(num_chunks_train, base_lr, cap)
+updates=4
+learning_rate_schedule = log_lr_schedule(num_chunks_train, updates=updates, base=base_lr)
 
 validate_every = 1
 save_every = 5
