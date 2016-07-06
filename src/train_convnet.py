@@ -129,8 +129,9 @@ if hasattr(model_module, 'resume_path'):
     print("...setting learning rate to {0:.7f}.".format(current_lr))
     learning_rate.set_value(current_lr)
     losses_train = resume_metadata['losses_train']
-    losses_valid_log = resume_metadata['losses_eval_valid']
-    losses_valid_auc = resume_metadata['losses_eval_train']
+    losses_valid_log = resume_metadata['losses_valid_xent']
+    losses_valid_auc = resume_metadata['losses_valid_auc']
+    losses_valid_aupr = resume_metadata['losses_valid_aupr']
     
 elif hasattr(model_module, 'pre_init_path'):
     print("Load model parameters for initializing first x layers")
@@ -255,7 +256,7 @@ for epoch in range(num_epochs):
         ### Do we save the model state?
         if ((epoch + 1) % model_module.save_every) == 0:
             print("Saving metadata, parameters")
-    
+     
             with open(metadata_tmp_path, 'wb') as f:
                 chunks_trained = epoch * model_module.num_chunks_train
                 save_dict = {
@@ -263,8 +264,9 @@ for epoch in range(num_epochs):
                     'experiment_id': expid,
                     'chunks_since_start': chunks_trained,
                     'losses_train': losses_train,
-                    'losses_eval_valid': losses_valid_log,
-                    'losses_eval_train': losses_valid_auc,
+                    'losses_valid_xent': losses_valid_log,
+                    'losses_valid_auc': losses_valid_auc,
+                    'losses_valid_aupr': losses_valid_aupr,
                     'time_since_start': time_since_start,
                     'param_values': nn.layers.get_all_param_values(l_out)
                 }

@@ -24,10 +24,9 @@ weight_norm = 7  ### called after each parameter update, during training, use la
 resume_path = '/cbio/cllab/home/zamparol/projects/SeqDemote/src/models/checkpoints/basset_onehot_no_wd.py-gpu-2-4.local-20160629-185436.pkl'
 
 # set schedule for learning rate decreases
-base_lr = 0.002
-learning_rate_schedule = lin_lr_schedule(num_chunks_train, base=0.002, cap=0.000002)
-
-learning_rate_schedule = OrderedDict(zip(changepts,learning_rates))
+base_lr = 0.02
+cap = 0.0002
+learning_rate_schedule = lin_lr_schedule(num_chunks_train, base_lr, cap)
 
 validate_every = 1
 save_every = 5

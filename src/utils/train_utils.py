@@ -62,7 +62,7 @@ def mt_precision(y, t):
 
 
 ### Manage the learning rate schedules
-def log_lr_schedule(num_chunks_train, updates=4, base=0.002):
+def log_lr_schedule(num_chunks_train, updates=4, base=0.02):
     ls = np.logspace(0.0, np.round(np.log10(num_chunks_train)), num = updates)
     changepts = ls.astype(int)
     changepts[0] = 0
@@ -70,7 +70,7 @@ def log_lr_schedule(num_chunks_train, updates=4, base=0.002):
 
     return OrderedDict(zip(changepts,learning_rates))
 
-def lin_lr_schedule(num_chunks_train, updates=15, base=0.002, cap=0.000002):
+def lin_lr_schedule(num_chunks_train, updates=15, base=0.02, cap=0.0002):
     ls = np.linspace(0.0, updates * num_chunks_train, num = updates).astype(int)
     changepts = ls.astype(int)
     changepts[0] = 0
