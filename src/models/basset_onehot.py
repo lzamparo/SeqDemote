@@ -24,10 +24,11 @@ weight_norm = 7  ### called after each parameter update, during training, use la
 #resume_path = '/cbio/cllab/home/zamparol/projects/SeqDemote/src/models/checkpoints/basset_onehot.py-gpu-2-5.local-20160629-185410.pkl'
 
 # set schedule for learning rate decreases
-base_lr = 0.02
-updates=4
-learning_rate_schedule = log_lr_schedule(num_chunks_train, updates=updates, base=base_lr)
-
+learning_rate_schedule = {
+    0: 0.003,
+    700: 0.0003,
+    800: 0.00003,
+}
 validate_every = 1
 save_every = 5
 data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
