@@ -130,6 +130,8 @@ class KmerDataLoader(DataLoader):
         self.__dict__.update(kwargs)
         if not hasattr(self, 'data_path'):
             self.data_path = os.path.abspath('../data/DNase/encode_roadmap.h5')
+        if not hasattr(self, 'kmer_length'):
+            self.kmer_length = 3
             
         def create_batch_gen(self, chunk_size=4096, num_chunks=458):
             if not hasattr(self, 'train_in'):
@@ -143,7 +145,8 @@ class KmerDataLoader(DataLoader):
             else:
                 my_num_chunks = num_chunks
                 
-            pass
+            return generators.train_kmerize_gen(self.train_in, self.train_out, 
+                                                self.kmer_length, my_chunk_size, my_num_chunks)
         
         def create_valid_gen(self, chunk_size=4096, num_chunks=17):
             if not hasattr(self, 'valid_in'):
@@ -157,7 +160,8 @@ class KmerDataLoader(DataLoader):
             else:
                 my_num_chunks = num_chunks
                 
-            pass
+            return generators.train_kmerize_gen(self.valid_in, self.valid_out, 
+                                                self.kmer_length, my_chunk_size, my_num_chunks)
 
 class RescaledDataLoader(DataLoader):
     def create_random_gen(self, images, labels):

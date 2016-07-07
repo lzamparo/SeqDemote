@@ -1,6 +1,8 @@
 import os
 import numpy as np
 
+from utils import dna_io
+
 ### Possible data augmentation schemes by subsequence plucking, and kmerization of different varieties
 
 default_augmentation_params = {
@@ -48,8 +50,45 @@ def train_sequence_gen(sequences, labels, chunk_size=4096, num_chunks=458, rng=n
     
 def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks=458, rng=np.random):
     ''' Given training data array ref, build and return a generator for one-hot encoded kmerized training sequence data '''
-    pass
+    for n in range(num_chunks):
+        indices = rng.randint(0, len(sequences), chunk_size)
+        
+        sequences_rows = sequences.shape[1]
+        sequences_cols = sequences.shape[3]
+        
+        labels_output_shape = labels.shape[1]
+        
+        chunk_x = np.zeros((chunk_size, np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)), dtype='float32')
+        chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
+        
+        for k, idx in enumerate(indices):
+            chunk_x[k] = None #fix this
+            chunk_y[k] = labels[indices[k]]
+        
+        yield chunk_x, chunk_y
+        
+        
+        
 
+def train_kmerize_gen_mismatch(sequences, labels, kmersize=3, chunk_size=4096, num_chunks=458, rng=np.random):
+    ''' Given training data array ref, build and return a generator measuring positional mismatches from each kmer '''
+    for n in range(num_chunks):
+        indices = rng.randint(0, len(sequences), chunk_size)
+        
+        sequences_rows = sequences.shape[1]
+        sequences_cols = sequences.shape[3]
+        
+        labels_output_shape = labels.shape[1]
+        
+        chunk_x = np.zeros((chunk_size, np.pow(sequences_rows, kmersize), 1, sequences_cols - (kmersize - 1)), dtype='float32')
+        chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
+        
+        for k, idx in enumerate(indices):
+            chunk_x[k] = None #fix this
+            chunk_y[k] = labels[indices[k]]
+            
+        yield chunk_x, chunk_y
+        
 
 #def distance(a, b):
     #return sum(map(lambda (x, y): 0 if x == y else 1, zip(a, b)))

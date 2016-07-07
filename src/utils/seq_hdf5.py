@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from optparse import OptionParser
 import sys
 
@@ -16,6 +17,9 @@ import split_ttv
 #
 # Make an HDF5 file for Torch input out of a FASTA file and targets text file,
 # dividing the data into training, validation, and test.
+#
+# Basset data set is made with these args: 
+# seq_hdf5.py -c -r -t 71886 -v 70000 encode_roadmap.fa encode_roadmap_act.txt encode_roadmap.h5
 ################################################################################
 
 ################################################################################
@@ -54,7 +58,7 @@ def main():
     
     # get counts, train & test & validation indices + counts
     train_count, test_count, valid_count = split_ttv.split_ttv(fasta_file, options.test_pct, options.valid_pct, options.counts)
-    #train_indices, test_indices, validation_indices = split_ttv.split_ttv_indices(fasta_file, train_count, test_count, valid_count, options.chunks)
+    train_indices, test_indices, validation_indices = split_ttv.split_ttv_indices(fasta_file, train_count, test_count, valid_count, options.chunks)
     ttv_counts = split_ttv.split_ttv_counts(fasta_file, train_count, test_count, valid_count, options.chunks)    
 
     #################################################################
@@ -62,8 +66,11 @@ def main():
     #################################################################
     h5f = h5py.File(out_file, 'w')
     target_labels = targets_handle.readline().strip().split('\t')
+    target_labels = np.array(target_labels).astype('|S21')
     h5f.create_dataset('target_labels', data=target_labels)
     
+    alphabet_size = 4
+    feature_cols = 600
     if options.kmerize > 1:
         alphabet_size = int(pow(4, options.kmerize))
         feature_cols = 600 - options.kmerize + 1
@@ -92,8 +99,9 @@ def main():
         chunksize = sum(ttv_tup)
         seqs, targets, headers = dna_io.load_data_1hot(fasta_handle, targets_handle, chunksize, extend_len=options.extend_length, mean_norm=False, whiten=False, permute=False, sort=False, kmerize=options.kmerize)
     
-        print >> sys.stderr, 'parsed %d fasta sequences for batch %d ' % (chunksize, i)
-        # reshape sequences for torch, depending on k.  Assume that k is specified to divide 600.
+        print('parsed', chunksize ,' fasta sequences for batch ', i, file=sys.stderr)
+        
+        # reshape sequences appropriately, depending on k.  Assume that k is specified to divide 600.
         if options.kmerize > 1:
             seqs = seqs.reshape((seqs.shape[0], alphabet_size,1,seqs.shape[1] / alphabet_size))
         else:
@@ -117,10 +125,11 @@ def main():
         #################################################################
         
         train_count, test_count, valid_count = ttv_tup
-        print >> sys.stderr, '%d parsed sequences, want %d sequences.  Discrepancy is %d ' % (seqs.shape[0], sum(ttv_tup), sum(ttv_tup) - seqs.shape[0])
-        print >> sys.stderr, 'want %d training sequences ' % train_count
-        print >> sys.stderr, 'want %d test sequences ' % test_count
-        print >> sys.stderr, 'want %d validation sequences ' % valid_count
+        
+        print(seqs.shape[0], ' parsed sequences, want', sum(ttv_tup),' sequences.  Discrepancy is ', sum(ttv_tup) - seqs.shape[0], file=sys.stderr)
+        print('want ', train_count,' training sequences ', file=sys.stderr)  
+        print('want ', test_count,' test sequences ', file=sys.stderr)
+        print('want ', valid_count, ' validation sequences', file=sys.stderr)
         
         # I'm losing sequences somewhere, so take them from the training set and resize appropriately
         discrepancy = sum(ttv_tup) - seqs.shape[0]

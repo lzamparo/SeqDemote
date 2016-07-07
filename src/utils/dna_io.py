@@ -48,53 +48,6 @@ def align_seqs_scores_1hot(seq_vecs, seq_scores, sort=True):
 
 
 ################################################################################
-# check_order
-#
-# Check that the order of sequences in a matrix of vectors matches the order
-# in the given fasta file
-################################################################################
-def check_order(seq_vecs, fasta_file):
-    # reshape into seq x 4 x len
-    seq_mats = np.reshape(seq_vecs, (seq_vecs.shape[0], 4, seq_vecs.shape[1]/4))
-
-    # generate sequences
-    real_seqs = []
-    for i in range(seq_mats.shape[0]):
-        seq_list = ['']*seq_mats.shape[2]
-        for j in range(seq_mats.shape[2]):
-            if seq_mats[i,0,j] == 1:
-                seq_list[j] = 'A'
-            elif seq_mats[i,1,j] == 1:
-                seq_list[j] = 'C'
-            elif seq_mats[i,2,j] == 1:
-                seq_list[j] = 'G'
-            elif seq_mats[i,3,j] == 1:
-                seq_list[j] = 'T'
-            else:
-                seq_list[j] = 'N'
-        real_seqs.append(''.join(seq_list))
-
-    # load FASTA sequences
-    fasta_seqs = []
-    for line in open(fasta_file):
-        if line[0] == '>':
-            fasta_seqs.append('')
-        else:
-            fasta_seqs[-1] += line.rstrip()
-
-    # check
-    assert(len(real_seqs) == len(fasta_seqs))
-
-    for i in range(len(fasta_seqs)):
-        try:
-            assert(fasta_seqs[i] == real_seqs[i])
-        except:
-            print(fasta_seqs[i])
-            print(real_seqs[i])
-            exit()
-
-
-################################################################################
 # dna_one_hot
 #
 # Input
@@ -111,31 +64,38 @@ def dna_one_hot(seq, seq_len=None, flatten=True):
     else:
         if seq_len <= len(seq):
             # trim the sequence
-            seq_trim = (len(seq)-seq_len)/2
+            seq_trim = int((len(seq)-seq_len)/2)
             seq = seq[seq_trim:seq_trim+seq_len]
             seq_start = 0
         else:
             seq_start = (seq_len-len(seq))/2
-
-    seq = seq.replace('A','0')
-    seq = seq.replace('C','1')
-    seq = seq.replace('G','2')
-    seq = seq.replace('T','3')
+            
+    ### BUG BUG BUG, this will not encode 'acgt', which is bogus as all hell.
+    #seq = seq.replace('A','0')
+    #seq = seq.replace('C','1')
+    #seq = seq.replace('G','2')
+    #seq = seq.replace('T','3')
+    
+    decoder = {'A': 0, 'C': 1, 'G': 2, 'T': 3, 'a': 0, 'c': 1, 'g': 2, 't': 3}
 
     # map nt's to a matrix 4 x len(seq) of 0's and 1's.
     seq_code = np.zeros((4,seq_len), dtype='int8')
+    mistakes = 0
     for i in range(seq_len):
         if i < seq_start:
             seq_code[:,i] = 0.25
         else:
             try:
-                seq_code[int(seq[i-seq_start]),i] = 1
+                seq_code[decoder[seq[i-seq_start]],i] = 1
             except:
                 # this fails with dype='int8'
                 # change to 'float16' and test it
                 # seq_code[:,i] = 0.25
+                mistakes = mistakes + 1
                 pass
 
+    if mistakes > 0:
+        print("DEBUG: made ", " mistakes for this sequence: ", seq)
     # flatten and make a column vector 1 x len(seq)
     if flatten:
         seq_vec = seq_code.flatten()[None,:]
@@ -178,30 +138,6 @@ def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=
         seq_vec = seq_code.flatten()[None,:]
     
     return seq_vec
-    
-
-
-################################################################################
-# fasta2dict
-#
-# Read a multifasta file into a dict.  Taking the whole line as the key.
-#
-# I've found this can be quite slow for some reason, even for a single fasta
-# entry.
-################################################################################
-def fasta2dict(fasta_file):
-    fasta_dict = OrderedDict()
-    header = ''
-
-    for line in open(fasta_file):
-        if line[0] == '>':
-            #header = line.split()[0][1:]
-            header = line[1:].rstrip()
-            fasta_dict[header] = ''
-        else:
-            fasta_dict[header] += line.rstrip()
-
-    return fasta_dict
 
 
 ################################################################################
@@ -251,19 +187,18 @@ def hash_scores(scores_list):
 ################################################################################
 def hash_sequences_1hot(seq_list, header_list, extend_len=None, kmer_length=1, dump_N=True):
     # do we need to kmerize?
-    if kmer_length > 1:
-        kmerize = True
+    kmerize = kmer_length > 1
+   
+    # determine longest sequence
+    if extend_len is not None:
+        seq_len = extend_len
     else:
-        # determine longest sequence
-        if extend_len is not None:
-            seq_len = extend_len
-        else:
-            seq_len = max([len(seq) for seq in seq_list])
+        seq_len = max([len(seq) for seq in seq_list])
 
     # load and code sequences
     seq_vecs = OrderedDict()
     for seq, header in zip(seq_list, header_list): 
-        if 'N' in seq and dump_N:
+        if 'N' in seq.upper() and dump_N:
             continue
         if seq and not kmerize:
             seq_vecs[header] = dna_one_hot(seq, seq_len)
@@ -275,7 +210,7 @@ def hash_sequences_1hot(seq_list, header_list, extend_len=None, kmer_length=1, d
 
 def read_fasta_chunk(fasta_handle, size):
     ''' Read size header,seq records from fasta_handle, return in separate lists.  '''
-    mixed_list = list(itertools.islice(fasta_handle, size * 2))
+    mixed_list = list(itertools.islice(fasta_handle, int(size * 2)))
     header_list = [mixed_list[i].strip() for i in range(0,len(mixed_list),2)]
     header_list = [elem[1:] for elem in header_list]    # drop the '>' character which does not appear in the targets
     seq_list = [mixed_list[i].strip() for i in range(1,len(mixed_list),2)]
@@ -297,7 +232,7 @@ def read_fasta_chunk(fasta_handle, size):
 def load_data_1hot(fasta_file, scores_file, chunksize, extend_len=None, mean_norm=True, whiten=False, permute=True, sort=False, kmerize=1):
     
     seq_list, header_list = read_fasta_chunk(fasta_file, chunksize)
-    scores_list = list(itertools.islice(scores_file, chunksize))
+    scores_list = list(itertools.islice(scores_file, int(chunksize)))
     
     # load sequences
     seq_vecs = hash_sequences_1hot(seq_list, header_list, extend_len, kmerize)
@@ -348,107 +283,6 @@ def load_sequences(fasta_file, permute=False):
     return train_seqs
 
 
-################################################################################
-# one_hot_get
-#
-# Input
-#  seq_vec:
-#  pos:
-#
-# Output
-#  nt
-################################################################################
-def one_hot_get(seq_vec, pos):
-    seq_len = len(seq_vec)/4
-
-    a0 = 0
-    c0 = seq_len
-    g0 = 2*seq_len
-    t0 = 3*seq_len
-
-    if seq_vec[a0+pos] == 1:
-        nt = 'A'
-    elif seq_vec[c0+pos] == 1:
-        nt = 'C'
-    elif seq_vec[g0+pos] == 1:
-        nt = 'G'
-    elif seq_vec[t0+pos] == 1:
-        nt = 'T'
-    else:
-        nt = 'N'
-
-    return nt
-
-
-################################################################################
-# one_hot_set
-#
-# Assuming the sequence is given as 4x1xLENGTH
-# Input
-#  seq_vec:
-#  pos:
-#  nt
-#
-# Output
-################################################################################
-def one_hot_set(seq_vec, pos, nt):
-    # zero all
-    for ni in range(4):
-        seq_vec[ni,0,pos] = 0
-
-    # set the nt
-    if nt == 'A':
-        seq_vec[0,0,pos] = 1
-    elif nt == 'C':
-        seq_vec[1,0,pos] = 1
-    elif nt == 'G':
-        seq_vec[2,0,pos] = 1
-    elif nt == 'T':
-        seq_vec[3,0,pos] = 1
-    else:
-        for ni in range(4):
-            seq_vec[ni,0,pos] = 0.25
-
-
-################################################################################
-# one_hot_set_1d
-#
-# Input
-#  seq_vec:
-#  pos:
-#  nt
-#
-# Output
-################################################################################
-def one_hot_set_1d(seq_vec, pos, nt):
-    seq_len = len(seq_vec)/4
-
-    a0 = 0
-    c0 = seq_len
-    g0 = 2*seq_len
-    t0 = 3*seq_len
-
-    # zero all
-    seq_vec[a0+pos] = 0
-    seq_vec[c0+pos] = 0
-    seq_vec[g0+pos] = 0
-    seq_vec[t0+pos] = 0
-
-    # set the nt
-    if nt == 'A':
-        seq_vec[a0+pos] = 1
-    elif nt == 'C':
-        seq_vec[c0+pos] = 1
-    elif nt == 'G':
-        seq_vec[g0+pos] = 1
-    elif nt == 'T':
-        seq_vec[t0+pos] = 1
-    else:
-        seq_vec[a0+pos] = 0.25
-        seq_vec[c0+pos] = 0.25
-        seq_vec[g0+pos] = 0.25
-        seq_vec[t0+pos] = 0.25
-
 
 def vecs2dna(seq_vecs):
     ''' vecs2dna
@@ -485,6 +319,13 @@ def vecs2dna(seq_vecs):
     return seqs
 
 
+def one_hot_to_kmerized(seq_vecs, kmer_size):
+    ''' Take one-hot encoded sequences vectors, return the positional kmerized encoded versions of the same'''
+    sequences = decode_one_hot(seq_vecs)
+    one_hot_kmer_list = [dna_one_hot_kmer(seq, kmer_size) for seq in sequences]
+    return np.asarray(one_hot_kmer_list) 
+    
+
 def decode_one_hot(seq_vecs):
     '''
     Input: 
@@ -492,16 +333,17 @@ def decode_one_hot(seq_vecs):
     Output:
         character string representation of decoded one-hot vectors
     '''
-    decoder_dict = {np.array([])}
-    pass
+    return kmer_vecs_to_dna(seq_vecs, k=1)
 
 def kmer_vecs_to_dna(seq_vecs, k):
     '''
-    Input: seq_vecs, an nd-array either shaped as either:
-    (1) a flattened vector representation (#seqs, 4^k * |sequence| / k)
-    (2) a torch tensor representation (#seqs, 4^k, 1, |sequence| / k)
+    Input: 
+        seq_vecs, an nd-array either shaped as either:
+            (1) a flattened vector representation (#seqs, 4^k * |sequence| / k)
+            (2) a torch tensor representation (#seqs, 4^k, 1, |sequence| / k)
     
-    Output: a list of decoded (4^k, |sequence| / k) DNA sequences
+    Output: 
+        a list of decoded (4^k, |sequence| / k) DNA sequences
     
     '''
     #ktable = khmer.new_ktable(k)
@@ -533,6 +375,15 @@ def kmer_vecs_to_dna(seq_vecs, k):
 
 
 def kmer_to_dna(seq, decoder, alphabet_size):
+    ''' 
+    Inputs: 
+        seq: the |alphabet| x |kmerized sequence length| one-hot encoded sequence
+        decoder: dict of {position: k-mer string}
+        alphabet_size: number of k-mers
+        
+    Outputs: 
+        decoded character string
+    '''
     # get the indices of non-zero rows.  np.nonzero works differently than I tought, have to iterate on columns of seq independently
     decoded_kmers = [decoder[np.nonzero(r)[0][0]] for r in np.transpose(seq)]
     firsts = [e[0] for e in decoded_kmers]  # since we're tiling the kmers now, just take the first letter of each decoded kmer
