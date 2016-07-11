@@ -62,7 +62,8 @@ def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks
         chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
-            chunk_x[k] = None #fix this
+            data_flat = dna_io.one_hot_to_kmerized(sequences[indices[k]], kmersize)
+            chunk_x[k] = data_flat.reshape((data_flat.shape[0], np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
             chunk_y[k] = labels[indices[k]]
         
         yield chunk_x, chunk_y
@@ -84,7 +85,8 @@ def train_kmerize_gen_mismatch(sequences, labels, kmersize=3, chunk_size=4096, n
         chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
-            chunk_x[k] = None #fix this
+            chunk_x[k] = None ### Fix for mismatch seq generation
+            
             chunk_y[k] = labels[indices[k]]
             
         yield chunk_x, chunk_y
