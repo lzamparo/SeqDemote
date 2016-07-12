@@ -111,8 +111,6 @@ def dna_one_hot(seq, seq_len=None, flatten=True):
 # Take a DNA string, turn it into a positional kmer representation.  This is a 
 # 4^k by seq_len / k matrix that is one-hot encoded for tokens.  
 #
-# I've found this can be quite slow for some reason, even for a single fasta
-# entry.
 ################################################################################
 def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=True):
     
@@ -139,6 +137,21 @@ def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=
     
     return seq_vec
 
+
+def dna_mismatch_kmer(seq, kmer_length, seq_len=None):
+    bases = ['A','C','G','T']
+    kmers = [''.join(p) for p in itertools.product(bases, repeat=kmer_length)] 
+    
+    my_kmers = [seq[i:i+kmer_length] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
+    seq_code = np.zeros((int(pow(4, kmer_length)), len(seq) - kmer_length + 1), dtype='float32')
+    for i, kmer in enumerate(my_kmers):
+        seq_code[:,i] = np.asarray([kmer_distance(kmer, basis_kmer) for basis_kmer in kmers], dtype='float32')
+
+    seq_code = 1 - (seq_code / float(kmer_length))
+    return seq_code.flatten()[None,:]
+
+def kmer_distance(a, b): 
+    return sum(x != y for x, y in zip(a, b))
 
 ################################################################################
 # hash_scores

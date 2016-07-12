@@ -20,7 +20,7 @@ def expected_failure(test):
     return inner
 
 ### DNase data fixtures
-train_size = 1880000
+train_size = 1879764
 valid_size = 70000
 output_size = 164
 chunk_size = 4096
@@ -51,6 +51,9 @@ rando_3mer_string = 'ATGGGGTAGAGAATGGGGTAGAGACCAGGT'
 
 alphabet_size_3 = 64
 alphabet_size_4 = 256
+
+threemer_chunk_shape = (chunk_size,alphabet_size_3, 1, 598)
+fourmer_chunk_shape = (chunk_size, alphabet_size_4, 1, 597)
 
 
 ### Structure, shape based tests
@@ -245,3 +248,63 @@ def test_decoding_kmerizing_fourmers():
     decoded_seqs = dna_io.kmer_vecs_to_dna(seqs_4mers_reshaped, 4)
     for seq, fix in zip(decoded_seqs,my_seqs):
         eq_(seq,fix)
+        
+
+def test_threemer_data_loader_shape():
+    """ Can I build a data loader for the kmerized DNase data specifying the data path? """
+    data_loader = load.KmerDataLoader(data_path=path, kmer_length=3)
+    data_loader.load_train()
+    num_chunks = range(num_chunks_train)
+    for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_batch_gen()):
+        print("Chunk: ", str(e + 1), " of ", num_chunks_train)
+        eq_(x_chunk.shape, threemer_chunk_shape)
+        eq_(y_chunk.shape, chunk_out_shape)
+
+    
+def test_fourmer_data_loader_shape():
+    """ Can I build a data loader for the kmerized DNase data specifying the data path? """
+    data_loader = load.KmerDataLoader(data_path=path, kmer_length=4)
+    data_loader.load_train()
+    num_chunks = range(num_chunks_train)
+    for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_batch_gen()):
+        print("Chunk: ", str(e + 1), " of ", num_chunks_train)
+        eq_(x_chunk.shape, fourmer_chunk_shape)
+        eq_(y_chunk.shape, chunk_out_shape)    
+
+def test_exhaust_threemer_data_loader():
+    """ Is my kmerized data loader generator producing the right shape chunks? """
+    seen_pts = 0
+    data_loader = load.KmerDataLoader(data_path=path, kmer_length=3)
+    data_loader.load_train()
+    num_chunks = range(num_chunks_train)
+    for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_batch_gen()):
+        seen_pts = seen_pts + x_chunk.shape[0]
+    print("Saw ", str(seen_pts), " points total")    
+    ok_(seen_pts <= train_size)
+    
+    
+### Kmer mismatch generator tests
+def test_threemer_mismatch_range():
+    # encode the fixtures as a mismatch encoded matrix
+    my_seqs = [aaa_3mer_string,ttt_3mer_string,aaa_3mer_string,ttt_3mer_string]    
+    seqs = np.vstack([dna_io.dna_mismatch_kmer(seq, kmer_length=3) for seq in my_seqs])
+    
+    # reshape into expected shape
+    seqs = seqs.reshape((seqs.shape[0],4,1,seqs.shape[1]/4))
+    
+    # ensure all entries lie in [0,1]
+    for seq in seqs:
+        ok_(np.all(seq >= 0))
+        ok_(np.all(seq <= 1))
+        
+def test_threemer_mismatch_all_range():
+    data_loader = load.KmerDataLoader(data_path=path, kmer_length=4)
+    data_loader.load_train()
+    num_chunks = range(num_chunks_train)
+    for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_mismatch_batch_gen()):
+        print("Chunk: ", str(e + 1), " of ", num_chunks_train)
+        for elem in x_chunk:
+            ok_(np.all(elem >= 0))
+            ok_(np.all(elem <= 1)) 
+        
+        

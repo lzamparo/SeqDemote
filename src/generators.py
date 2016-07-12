@@ -85,15 +85,14 @@ def train_kmerize_gen_mismatch(sequences, labels, kmersize=3, chunk_size=4096, n
         chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
-            chunk_x[k] = None ### Fix for mismatch seq generation
+            decoded_seqs = dna_io.decode_one_hot(sequences[indices[k]])
+            mismatch_seqs = np.asarray([dna_io.dna_mismatch_kmer(seq, kmersize) for seq in decoded_seqs])
             
+            chunk_x[k] = mismatch_seqs.reshape((chunk_size, np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
             chunk_y[k] = labels[indices[k]]
             
         yield chunk_x, chunk_y
-        
 
-#def distance(a, b):
-    #return sum(map(lambda (x, y): 0 if x == y else 1, zip(a, b)))
 
 
 ####  augmentation  ####

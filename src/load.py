@@ -148,6 +148,21 @@ class KmerDataLoader(DataLoader):
             return generators.train_kmerize_gen(self.train_in, self.train_out, 
                                                 self.kmer_length, my_chunk_size, my_num_chunks)
         
+        def create_mismatch_batch_gen(self, chunk_size=4096, num_chunks=458):
+            if not hasattr(self, 'train_in'):
+                self.load_train()
+            if hasattr(self, 'chunk_size'):
+                my_chunk_size = self.chunk_size
+            else:
+                my_chunk_size = chunk_size
+            if hasattr(self, 'num_chunks_train'):
+                my_num_chunks = self.num_chunks_train
+            else:
+                my_num_chunks = num_chunks
+                
+            return generators.train_kmerize_gen_mismatch(self.train_in, self.train_out, 
+                                                self.kmer_length, my_chunk_size, my_num_chunks)            
+        
         def create_valid_gen(self, chunk_size=4096, num_chunks=17):
             if not hasattr(self, 'valid_in'):
                 self.load_validation()
@@ -162,6 +177,21 @@ class KmerDataLoader(DataLoader):
                 
             return generators.train_kmerize_gen(self.valid_in, self.valid_out, 
                                                 self.kmer_length, my_chunk_size, my_num_chunks)
+        
+        def create_mismatch_valid_gen(self, chunk_size=4096, num_chunks=17):
+            if not hasattr(self, 'valid_in'):
+                self.load_validation()
+            if hasattr(self, 'chunk_size'):
+                my_chunk_size = self.chunk_size
+            else:
+                my_chunk_size = chunk_size
+            if hasattr(self, 'num_chunks_valid'):
+                my_num_chunks = self.num_chunks_valid
+            else:
+                my_num_chunks = num_chunks
+                
+            return generators.train_kmerize_gen_mismatch(self.valid_in, self.valid_out, 
+                                                self.kmer_length, my_chunk_size, my_num_chunks)            
 
 class RescaledDataLoader(DataLoader):
     def create_random_gen(self, images, labels):
