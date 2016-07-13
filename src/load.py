@@ -125,7 +125,7 @@ class DNaseDataLoader(DataLoader):
 
 class KmerDataLoader(DataLoader):
     
-    def __init(self, **kwargs):
+    def __init__(self, **kwargs):
         DataLoader.__init__(self)
         self.__dict__.update(kwargs)
         if not hasattr(self, 'data_path'):
