@@ -58,12 +58,12 @@ def train_kmerize_gen(sequences, labels, kmersize=3, chunk_size=4096, num_chunks
         
         labels_output_shape = labels.shape[1]
         
-        chunk_x = np.zeros((chunk_size, np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)), dtype='float32')
+        chunk_x = np.zeros((chunk_size, pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)), dtype='float32')
         chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
             data_flat = dna_io.one_hot_to_kmerized(sequences[indices[k]], kmersize)
-            chunk_x[k] = data_flat.reshape((data_flat.shape[0], np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
+            chunk_x[k] = data_flat.reshape((data_flat.shape[0], pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
             chunk_y[k] = labels[indices[k]]
         
         yield chunk_x, chunk_y
@@ -81,14 +81,14 @@ def train_kmerize_gen_mismatch(sequences, labels, kmersize=3, chunk_size=4096, n
         
         labels_output_shape = labels.shape[1]
         
-        chunk_x = np.zeros((chunk_size, np.pow(sequences_rows, kmersize), 1, sequences_cols - (kmersize - 1)), dtype='float32')
+        chunk_x = np.zeros((chunk_size, pow(sequences_rows, kmersize), 1, sequences_cols - (kmersize - 1)), dtype='float32')
         chunk_y = np.zeros((chunk_size, labels_output_shape), dtype='float32')
         
         for k, idx in enumerate(indices):
             decoded_seqs = dna_io.decode_one_hot(sequences[indices[k]])
             mismatch_seqs = np.asarray([dna_io.dna_mismatch_kmer(seq, kmersize) for seq in decoded_seqs])
             
-            chunk_x[k] = mismatch_seqs.reshape((chunk_size, np.pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
+            chunk_x[k] = mismatch_seqs.reshape((chunk_size, pow(sequences_rows,kmersize), 1, sequences_cols - (kmersize-1)))
             chunk_y[k] = labels[indices[k]]
             
         yield chunk_x, chunk_y
