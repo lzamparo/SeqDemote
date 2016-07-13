@@ -116,12 +116,8 @@ def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=
     
     if keep_repeats:
         seq = seq.upper()
-    
-    #ktable = khmer.new_ktable(kmer_length)
-    #kmers_position = {ktable.reverse_hash(i): i for i in range(0, ktable.n_entries())}
         
-    bases = ['A','C','G','T']
-    kmers = [''.join(p) for p in itertools.product(bases, repeat=kmer_length)]
+    kmers = generate_kmer_list(kmer_length)
     kmers_position = {kmers[i]: i for i in range(0, len(kmers))}  
     
     my_kmers = [seq[i:i+kmer_length] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
@@ -139,8 +135,8 @@ def dna_one_hot_kmer(seq, kmer_length, seq_len=None, flatten=True, keep_repeats=
 
 
 def dna_mismatch_kmer(seq, kmer_length, seq_len=None):
-    bases = ['A','C','G','T']
-    kmers = [''.join(p) for p in itertools.product(bases, repeat=kmer_length)] 
+    
+    kmers = generate_kmer_list(kmer_length)
     
     my_kmers = [seq[i:i+kmer_length] for i in range(0, len(seq) - kmer_length + 1, 1)]  ## TODO: might have to revisit this to handle padded sequences
     seq_code = np.zeros((int(pow(4, kmer_length)), len(seq) - kmer_length + 1), dtype='float32')
@@ -332,11 +328,10 @@ def vecs2dna(seq_vecs):
     return seqs
 
 
-def one_hot_to_kmerized(seq_vecs, kmer_size):
-    ''' Take one-hot encoded sequences vectors, return the positional kmerized encoded versions of the same'''
-    sequences = decode_one_hot(seq_vecs)
-    one_hot_kmer_list = [dna_one_hot_kmer(seq, kmer_size) for seq in sequences]
-    return np.asarray(one_hot_kmer_list) 
+def one_hot_to_kmerized(seq_vec, kmer_size):
+    ''' Take a one-hot encoded sequence vector, return the positional kmerized encoded version of the same '''
+    sequence = decode_one_hot(seq_vec)
+    return np.asarray(dna_one_hot_kmer(sequence, kmer_size)) 
     
 
 def decode_one_hot(seq_vecs):
@@ -346,7 +341,9 @@ def decode_one_hot(seq_vecs):
     Output:
         character string representation of decoded one-hot vectors
     '''
-    return kmer_vecs_to_dna(seq_vecs, k=1)
+    kmers = generate_kmer_list(1)
+    kmer_decoder = {i: kmers[i] for i in range(0, len(kmers))}
+    return kmer_to_dna(seq_vecs,kmer_decoder,1)
 
 def kmer_vecs_to_dna(seq_vecs, k):
     '''
@@ -359,11 +356,8 @@ def kmer_vecs_to_dna(seq_vecs, k):
         a list of decoded (4^k, |sequence| / k) DNA sequences
     
     '''
-    #ktable = khmer.new_ktable(k)
-    #kmer_decoder = {i: ktable.reverse_hash(i) for i in range(0, ktable.n_entries())}
     
-    bases = ['A','C','G','T']
-    kmers = [''.join(p) for p in itertools.product(bases, repeat=k)]   
+    kmers = generate_kmer_list(k)
     kmer_decoder = {i: kmers[i] for i in range(0, len(kmers))}
     
     alphabet_size = int(pow(4, k))
@@ -385,6 +379,12 @@ def kmer_vecs_to_dna(seq_vecs, k):
         seqs.append(kmer_to_dna(seq_mat, kmer_decoder, alphabet_size))
     
     return seqs
+
+def generate_kmer_list(k):
+    ''' generate all kmers of length k '''
+    bases = ['A','C','G','T']
+    kmers = [''.join(p) for p in itertools.product(bases, repeat=k)]   
+    return kmers
 
 
 def kmer_to_dna(seq, decoder, alphabet_size):
