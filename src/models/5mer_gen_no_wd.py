@@ -17,7 +17,7 @@ data_cols = 600 - kmer_length + 1
 ### training params
 
 batch_size = 128
-chunk_size = 4096
+chunk_size = 2048
 num_chunks_train = 1880000 // chunk_size
 num_chunks_valid = 70000 // chunk_size
 momentum = 0.98
