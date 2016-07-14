@@ -10,8 +10,9 @@ import lasagne as nn
 import generators
 import load 
 
-data_rows = 4 # probably don't need this param specified here
-data_cols = 600 # probably don't need this param specified here
+kmer_length = 3
+data_rows = 64 
+data_cols = 600 - kmer_length + 1 
 
 ### training params
 
@@ -31,7 +32,7 @@ learning_rate_schedule = {
 }
 validate_every = 1
 save_every = 5
-data_loader = load.KmerDataLoader(kmer_length=3, chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train)
+data_loader = load.KmerDataLoader(kmer_length=kmer_length, chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train)
 
 ### The output of the basset model with fewer filters
 #(1): nn.SpatialConvolution(4 -> 150, 19x1) ** should be 300
@@ -67,7 +68,7 @@ BatchNormLayer = nn.layers.BatchNormLayer
 
 def build_model():
 
-    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
+    l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  
     l1a = Conv2DLayer(l0, num_filters=300, filter_size=(1, 19), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
@@ -84,7 +85,7 @@ def build_model():
     l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 4))
     
     ### output dims of l3d should be (n_batches, 100, 10)
-    #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,2000)) ## produces the same output shape, and without the need to specify the shape.
+    
     l4a = nn.layers.FlattenLayer(l3d)
     l4b = nn.layers.DenseLayer(l4a, 1000)
     l4c = BatchNormLayer(l4b)
