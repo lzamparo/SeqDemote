@@ -126,7 +126,7 @@ def test_exhaust_data():
     ok_(seen_pts <= train_size)
 
 
-def test_buffered_batch_gen_threaded(training_data, training_targets):
+def test_buffered_batch_gen_threaded():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_training_data()
@@ -139,7 +139,7 @@ def test_buffered_batch_gen_threaded(training_data, training_targets):
     ok_(seen_pts == train_size)
     
  
-def test_buffered_batch_gen_mp(training_data, training_targets):
+def test_buffered_batch_gen_mp():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_training_data()
@@ -155,7 +155,7 @@ def test_buffered_batch_gen_mp(training_data, training_targets):
 ### Kmerizing generators 
 
 
-def test_buffered_kmerizing_gen(training_data, training_targets):
+def test_buffered_kmerizing_gen():
     """ Can I create a buffered batch generator that kmerizes the data? """
     
     training_data, training_targets = get_training_data()
