@@ -6,7 +6,8 @@ import sys
 ################################################################################
 # generate_activations.py
 #
-# Create a tsv activations file for each of the flanks found in 
+# Create a tsv activations file for each of the flanks found in the flanks 
+# fasta file.
 ################################################################################
 
 ################################################################################
@@ -41,7 +42,7 @@ def main():
     outfile.close()
 
 def make_flank_acts(length):
-    return '\t'.join([0 for i in range(length)])
+    return '\t'.join(['0' for i in range(length)])
 
 ################################################################################
 # __main__

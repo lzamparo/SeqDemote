@@ -9,7 +9,7 @@ import numpy as np
 
 import subprocess
 
-import dna_io
+from utils import dna_io
 import split_ttv
 
 ################################################################################
@@ -56,6 +56,7 @@ def main():
     fasta_handle = open(fasta_file, 'r')
     targets_handle = open(targets_file, 'r')
     
+        
     # get counts, train & test & validation indices + counts
     train_count, test_count, valid_count = split_ttv.split_ttv(fasta_file, options.test_pct, options.valid_pct, options.counts)
     train_indices, test_indices, validation_indices = split_ttv.split_ttv_indices(fasta_file, train_count, test_count, valid_count, options.chunks)
