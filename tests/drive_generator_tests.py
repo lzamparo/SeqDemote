@@ -139,17 +139,6 @@ def test_buffered_batch_gen_threaded():
     ok_(seen_pts == train_size)
     
 
-def test_buffered_batch_gen_woozle():
-    """ Can I create a buffered batch generator and exhaust the data? """
-    
-    training_data, training_targets = get_training_data()
-    my_gen = buffering.buffered_gen_woozle(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
-    num_chunks = range(num_chunks_train)
-    seen_pts = 0
-    for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
-        seen_pts = seen_pts + x_chunk.shape[0]
-    print("Saw ", str(seen_pts), " points total")    
-    ok_(seen_pts == train_size)
  
 def test_buffered_batch_gen_mp():
     """ Can I create a buffered batch generator and exhaust the data? """
@@ -208,7 +197,7 @@ def test_buffered_kmerizing_gen():
 
 
 if __name__ == "__main__":
-    test_buffered_batch_gen_threaded()
+    #test_buffered_batch_gen_threaded()
     test_buffered_batch_gen_woozle()
     #test_buffered_batch_gen_mp()
     #test_buffered_kmerizing_gen()
