@@ -21,7 +21,7 @@ def expected_failure(test):
     return inner
 
 ### DNase data fixtures
-train_size = 1880000
+train_size = 3201397
 valid_size = 70000
 output_size = 164
 chunk_size = 4096

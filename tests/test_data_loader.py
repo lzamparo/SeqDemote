@@ -20,7 +20,7 @@ def expected_failure(test):
     return inner
 
 ### DNase data fixtures
-train_size = 1879764
+train_size = 3201397
 valid_size = 70000
 output_size = 164
 chunk_size = 4096
@@ -33,7 +33,7 @@ chunk_train_shape = (chunk_size,4,1,600)
 chunk_out_shape = (chunk_size,output_size)
 batch_train_shape = (batch_size,4,1,600)
 
-path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap.h5")
+path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap_all.h5")
 
 
 ### Kmer fixtures
