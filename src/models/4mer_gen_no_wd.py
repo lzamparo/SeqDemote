@@ -17,7 +17,7 @@ data_cols = 600 - kmer_length + 1
 
 batch_size = 128
 chunk_size = 4096
-num_chunks_train = 1880000 // chunk_size
+num_chunks_train = 3201397 // chunk_size
 num_chunks_valid = 70000 // chunk_size
 momentum = 0.98
 weight_norm = 7  ### called after each parameter update, during training, use lasagne.updates.norm_constraint()

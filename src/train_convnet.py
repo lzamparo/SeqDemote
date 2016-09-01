@@ -206,7 +206,7 @@ for epoch in range(num_epochs):
         
     epoch_end_time = time.time()
     losses_train.append(np.mean(epoch_train_loss))
-    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(epoch_train_loss)))
+    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(epoch_train_loss))) ### dump these to a text file somewhere else...
     print("Training for epoch ", epoch, " took ", epoch_end_time - epoch_start_time, "s", flush=True)
     
     ### Do we validate?
@@ -230,11 +230,11 @@ for epoch in range(num_epochs):
             outputs.append(outputs_chunk)
             labels.append(y_chunk_valid)
 
-        outputs = np.vstack(outputs)
+        outputs = np.vstack(outputs)  ### dump these to a list, pickle the list
         loss = train_utils.log_loss(outputs, np.vstack(labels))
         acc = train_utils.mt_accuracy(outputs, np.vstack(labels))
         precision = train_utils.mt_precision(outputs, np.vstack(labels))
-        print("    validation loss:\t {0:.6f}.".format(loss))
+        print("    validation loss:\t {0:.6f}.".format(loss))  ### dump these to a text file somewhere else
         print("    validation roc:\t {0:.2f}.".format(acc * 100))
         print("    validation aupr:\t {0:.2f}".format(precision * 100))
         losses_valid_log.append(loss)

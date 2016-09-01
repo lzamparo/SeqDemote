@@ -78,7 +78,7 @@ class DNaseDataLoader(DataLoader):
         DataLoader.__init__(self)
         self.__dict__.update(kwargs)
         if not hasattr(self, 'data_path'):
-            self.data_path = os.path.abspath("../data/DNase/encode_roadmap.h5")
+            self.data_path = os.path.abspath("../data/DNase/encode_roadmap_all.h5")
         
     
     def create_batch_gen(self, chunk_size=4096, num_chunks=458):
@@ -129,7 +129,7 @@ class KmerDataLoader(DataLoader):
         DataLoader.__init__(self)
         self.__dict__.update(kwargs)
         if not hasattr(self, 'data_path'):
-            self.data_path = os.path.abspath('../data/DNase/encode_roadmap.h5')
+            self.data_path = os.path.abspath('../data/DNase/encode_roadmap_all.h5')
         if not hasattr(self, 'kmer_length'):
             self.kmer_length = 3
             
