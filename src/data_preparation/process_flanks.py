@@ -20,8 +20,8 @@ def main():
     parser.add_option('-o', dest='flank_bed', default='encode_roadmap_flanks', help='prefix for output bed_file')
     parser.add_option('-l', dest='chrom_lengths', default='human.hg19.genome', help='human chromosome lengths file')
     parser.add_option('-p', dest='chrom_path', default='/Users/zamparol/projects/SeqDemote/data/DNase/genomes', help='path to chromosome lengths file')
-    parser.add_option('-m', dest='merge_overlap', default=200, type='int', help='Overlap length (after extension to feature_size) above which to merge features [Default: %default]')
-    parser.add_option('-s', dest='feature_size', default=600, type='int', help='Extend features to this size [Default: %default]')
+    parser.add_option('-m', dest='merge_overlap', default=100, type='int', help='Overlap length (after extension to feature_size) above which to merge features [Default: %default]')
+    parser.add_option('-s', dest='feature_size', default=400, type='int', help='Extend features to this size [Default: %default]')
     (options,args) = parser.parse_args()
 
     if len(args) != 1:

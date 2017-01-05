@@ -28,7 +28,7 @@ def main():
     parser.add_option('-m', dest='merge_overlap', default=200, type='int', help='Overlap length (after extension to feature_size) above which to merge features [Default: %default]')
     parser.add_option('-n', dest='no_db_activity', default=False, action='store_true', help='Do not pass along the activities of the database sequences [Default: %default]')
     parser.add_option('-o', dest='out_prefix', default='features', help='Output file prefix [Default: %default]')
-    parser.add_option('-s', dest='feature_size', default=600, type='int', help='Extend features to this size [Default: %default]')
+    parser.add_option('-s', dest='feature_size', default=400, type='int', help='Extend features to this size [Default: %default]')
     parser.add_option('-y', dest='ignore_y', default=False, action='store_true', help='Ignore Y chromsosome features [Default: %default]')
     (options,args) = parser.parse_args()
 

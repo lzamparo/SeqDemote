@@ -197,6 +197,7 @@ for epoch in range(num_epochs):
         losses = []
         for b in range(num_batches_chunk):
             loss = iter_train(b)
+            outs = compute_output(b)
             if np.isnan(loss):
                 raise RuntimeError("NaN DETECTED.")
             losses.append(loss)

@@ -4,7 +4,7 @@ import data_load_utils as utils
 from nose.tools import eq_
 import nose, functools
 
-import dna_io
+from utils import dna_io
 import numpy as np
 
 def expected_failure(test):
