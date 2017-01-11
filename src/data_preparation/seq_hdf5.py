@@ -25,7 +25,7 @@ import split_ttv
 ################################################################################
 # main
 ################################################################################
-def main():
+def encode_sequences(my_args=None):
     usage = 'usage: %prog [options] <fasta_file> <targets_file> <out_file>'
     parser = OptionParser(usage)
     parser.add_option('-b', dest='batch_size', default=None, type='int', help='Align sizes with batch size')
@@ -37,8 +37,11 @@ def main():
     parser.add_option('-k', dest='kmerize', default=1, type='int', help='produce kmer-ized representation of the input for this value of k')
     parser.add_option('-v', dest='valid_pct', default=0, type='float', help='Validation % [Default: %default]')
     parser.add_option('-u', dest='chunks', default=10, type='int', help='Process the fasta file in this many chunks to conserve RAM')
-    (options,args) = parser.parse_args()
-
+    parser.add_option('-g', dest='group', default='/', type='str', help='All data (both encoded sequences and activation labels) are stored underneath this group.  Will be created if it does not arleady exist.')
+    if not my_args:
+        (options,args) = parser.parse_args()
+    else:
+        (options,args) = parser.parse_args(args=my_args)
     if len(args) != 3:
         parser.error('Must provide fasta file, targets file, and an output prefix')
     else:
@@ -65,10 +68,14 @@ def main():
     #################################################################
     # construct hdf5 representation
     #################################################################
-    h5f = h5py.File(out_file, 'w')
-    target_labels = targets_handle.readline().strip().split('\t')
+    h5f = h5py.File(out_file, 'a')
+    target_labels = [t for t in targets_handle.readline().strip().split('\t') if not t.endswith("ID")]
     target_labels = np.array(target_labels).astype('|S21')
-    h5f.create_dataset('target_labels', data=target_labels)
+    
+    group = h5f.create_group(options.group)
+    group.create_dataset('target_labels', data=target_labels)
+    data_group = group.create_group('data')
+    label_group = group.create_group('labels')    
     
     alphabet_size = 4
     feature_cols = 600
@@ -77,18 +84,17 @@ def main():
         feature_cols = 600 - options.kmerize + 1
     
     if train_count > 0:
-        train_in_dset = h5f.create_dataset('train_in', shape=(0, alphabet_size, 1, feature_cols),  maxshape=(None, alphabet_size, 1, feature_cols), dtype='uint8')
-        train_out_dset = h5f.create_dataset('train_out', shape=(0, len(target_labels)), maxshape=(None,len(target_labels)), dtype='uint8')
+        train_in_dset = data_group.create_dataset('train_in', shape=(0, alphabet_size, 1, feature_cols),  maxshape=(None, alphabet_size, 1, feature_cols), dtype='uint8')
+        train_out_dset = label_group.create_dataset('train_out', shape=(0, len(target_labels)), maxshape=(None,len(target_labels)), dtype='uint8')
 
     if valid_count > 0:
-        valid_in_dset = h5f.create_dataset('valid_in', shape=(valid_count, alphabet_size, 1, feature_cols), dtype='uint8')
-        valid_out_dset = h5f.create_dataset('valid_out', shape=(valid_count, len(target_labels)), dtype='uint8')
+        valid_in_dset = data_group.create_dataset('valid_in', shape=(valid_count, alphabet_size, 1, feature_cols), dtype='uint8')
+        valid_out_dset = label_group.create_dataset('valid_out', shape=(valid_count, len(target_labels)), dtype='uint8')
 
     if test_count > 0: 
-        test_in_dset = h5f.create_dataset('test_in', shape=(test_count, alphabet_size, 1, feature_cols),dtype='uint8')
-        test_out_dset = h5f.create_dataset('test_out', shape=(test_count, len(target_labels)), dtype='uint8')
-        #test_header_dset = h5f.create_dataset('test_headers', shape=(test_count))
-    
+        test_in_dset = data_group.create_dataset('test_in', shape=(test_count, alphabet_size, 1, feature_cols),dtype='uint8')
+        test_out_dset = label_group.create_dataset('test_out', shape=(test_count, len(target_labels)), dtype='uint8')
+
     #################################################################
     # load data in chunks
     #################################################################
@@ -185,4 +191,4 @@ def batch_round(count, batch_size):
 # __main__
 ################################################################################
 if __name__ == '__main__':
-    main()
+    encode_sequences()

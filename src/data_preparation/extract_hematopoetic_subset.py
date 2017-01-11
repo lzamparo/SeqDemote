@@ -1,17 +1,21 @@
 import os
+import sys
 import pandas
 import numpy as np
+from subprocess import call, check_output
+from process_flanks import make_flanks
+from seq_hdf5 import encode_sequences
+
 
 ### Grab all cells within the hematopoetic lineage out of the Roadmap data used for Alvaro's paper
 
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/DNase'))
 
-
-# read both peaks data file, DNase counts file
+### Read both peaks data file, DNase counts file
 peaks = pandas.read_csv("peaksTable.txt", sep="\t")
 counts = pandas.read_csv("DNaseCnts.txt", sep="\t")
 
-# establish a dictionary to return cell type codes in the form of an np.array
+### Establish a dictionary to return cell type codes in the form of an np.array
 activity_dict = {}
 activity_dict['H1hesc'] = '0'
 activity_dict['CD34'] = '1'
@@ -20,13 +24,8 @@ activity_dict['CD56'] = '3'
 activity_dict['CD3'] = '4'
 activity_dict['CD19'] = '5'
     
-    
-#chr13	19144320	19144920	.	1	+	4
-#chr13	19168795	19169395	.	1	+	72
-#chr13	19170000	19170600	.	1	+	25
-#chr13	19172116	19172716	.	1	+	2,8,10,21,26,29,48,118    
         
-# Convert Alvaro's data set into a bedfile format expected by preprocess_features.py
+### utility functions, maybe refactor them out later?
 def extend_peak(start,end, length=600):
     ''' If start,end is less than length, extend them.  If start,end is more than length, cut them. '''
     peak_length = end - start
@@ -46,23 +45,13 @@ def alvaro_to_bed_format(line):
     new_start, new_end = extend_peak(line['start'], line['end'])
     outline = '\t'.join([line['chr'], str(new_start), str(new_end), str(line['peakID']), '1', '+', active_in])
     return outline
-    
-outfile = open('hematopoetic_peaks.bed','w')    
-for index, line in peaks.iterrows():
-    print(alvaro_to_bed_format(line), file=outfile)
-
-outfile.close()    
 
 
-# Use bedtools to extract fasta formatted sequences based on the bedtools format
-
-
-# Make an activity table by parsing Alvaro's file again
-
-    #8988T	AoSMC	Chorion	CLL	Fibrobl	FibroP	Gliobla	GM12891	GM12892	GM18507	GM19238	GM19239	GM19240	H9ES	HeLa-S3_IFNa4h	Hepatocytes	HPDE6-E6E7	HSMM_emb	HTR8svn	Huh-7.5	Huh-7	iPS	Ishikawa_Estradiol	Ishikawa_4OHTAM	LNCaP_androgen	MCF-7_Hypoxia	Medullo	Melano	Myometr	Osteobl	PanIsletD	PanIslets	pHTE	ProgFib	RWPE1	Stellate	T-47D	CD4_Th0	Urothelia	Urothelia_UT189	AG04449	AG04450	AG09309	AG09319	AG10803	AoAF	BE2_C	BJ	Caco-2	CD20+	CD34+	CMK	GM06990	GM12864	GM12865	H7-hESC	HAc	HAEpiC	HA-h	HA-sp	HBMEC	HCF	HCFaa	HCM	HConF	HCPEpiCHCT-116	HEEpiC	HFF	HFF-Myc	HGF	HIPEpiC	HL-60	HMF	HMVEC-dAd	HMVEC-dBl-Ad	HMVEC-dBl-Neo	HMVEC-dLy-Ad	HMVEC-dLy-Neo	HMVEC-dNeo	HMVEC-LBl	HMVEC-LLy	HNPCEpiC	HPAEC	HPAF	HPdLF	HPF	HRCEpiC	HRE	HRGEC	HRPEpiC	HVMF	Jurkat	Monocytes-CD14+	NB4	NH-A	NHDF-Ad	NHDF-neo	NHLF	NT2-D1	PANC-1	PrEC	RPTEC	SAEC	SKMC	SK-N-MC	SK-N-SH_RA	Th2	WERI-Rb-1	WI-38	WI-38_4OHTAM	A549	GM12878	H1-hESC	HeLa-S3	HepG2	HMEC	HSMM	HSMMtube	HUVEC	K562	LNCaP	MCF-7	NHEK	Th1	LNG.IMR90 	ESC.H9 	ESC.H1 	IPSC.DF.6.9 	IPSC.DF.19.11 	ESDR.H1.NEUR.PROG 	ESDR.H1.BMP4.MESO 	ESDR.H1.BMP4.TROP 	ESDR.H1.MSC 	BLD.CD3.PPC 	BLD.CD3.CPC 	BLD.CD14.PC 	BLD.MOB.CD34.PC.M 	BLD.MOB.CD34.PC.F 	BLD.CD19.PPC 	BLD.CD56.PC 	SKIN.PEN.FRSK.FIB.01 	SKIN.PEN.FRSK.FIB.02 	SKIN.PEN.FRSK.MEL.01 	SKIN.PEN.FRSK.KER.02 	BRST.HMEC.35 	THYM.FET 	BRN.FET.F 	BRN.FET.M 	MUS.PSOAS 	MUS.TRNK.FET 	MUS.LEG.FET 	HRT.FET 	GI.STMC.FET 	GI.S.INT.FET 	GI.L.INT.FET 	GI.S.INT 	GI.STMC.GAST 	KID.FET 	LNG.FET 	OVRY 	ADRL.GLND.FET 	PLCNT.FET 	PANC
-#chr13:19144320-19144920(+)	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-#chr13:19168795-19169395(+)	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-#chr13:19170000-19170600(+)	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	00	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+# reverse the activity dict, so I can parse the peaks bed file and make them into an activation table
+code_to_str = {}
+for key in activity_dict.keys():
+    val = activity_dict[key]
+    code_to_str[val] = key
 
 # establish a dictionary to return indicators in the form of an np.array
 pattern_dict = {}
@@ -83,8 +72,126 @@ def parse_access_pattern(pattern):
     arrays = tuple([pattern_dict[d] for d in pattern.split('-')])
     return np.sum(np.vstack(arrays), axis=0)
 
+def peak_to_activation(peak):
+    ''' translate a bedfile peak into a fasta identifier for the peak, and an activation list '''
+    peak = peak.strip()
+    parts = peak.split('\t')
+    chrom = parts[0]
+    start = parts[1]
+    end = parts[2]
+    strand = parts[5]
+    activations = parts[6]
+    
+    active_in_peaks_str = [code_to_str[p] for p in activations.split(',')]
+    active_in_peaks_array = parse_access_pattern('-'.join(active_in_peaks_str))
+    peak_ID = chrom + ":" + start + "-" + end + "(" + strand + ")"
+    out_list = [peak_ID]
+    out_list.extend([str(e) for e in active_in_peaks_array.tolist()])
+    act_line = '\t'.join(out_list)    
+    return act_line
 
-# Encode the fasta sequences, activity table in a tensor, store in an h5 file
+### Convert Alvaro's data set into a bedfile format expected by preprocess_features.py
+if not os.path.exists('hematopoetic_peaks.bed'):
+    outfile = open('hematopoetic_peaks.bed','w')    
+    for index, line in peaks.iterrows():
+        print(alvaro_to_bed_format(line), file=outfile)
+    
+    outfile.close()    
 
 
+### Use bedtools to extract fasta formatted sequences based on the bedtools format
+if not os.path.exists('hematopoetic_peaks.fa'):
+    try:
+        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed hematopoetic_peaks.bed -s -fo hematopoetic_peaks.fa", shell=True)
+        if retcode < 0:
+            print("Child was terminated by signal", -retcode, file=sys.stderr)
+        else:
+            print("Child returned", retcode, file=sys.stderr)
+    except OSError as e:
+        print("Execution failed:", e, file=sys.stderr)
 
+
+### Make a matched (or near matched) set of flanks for the peaks in hematopoetic_peaks.bed
+if not os.path.exists('hematopoetic_flanks.bed'):
+    arg_string = "-o hematopoetic_flanks hematopoetic_peaks.bed"
+    my_args = arg_string.split(sep=' ')
+    make_flanks(my_args)
+
+
+### Use bedtools again to get the fasta formatted sequences for the flanks
+if not os.path.exists('hematopoetic_flanks.fa'):
+    try:
+        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed hematopoetic_flanks.bed -s -fo hematopoetic_flanks.fa", shell=True)
+        if retcode < 0:
+            print("Child was terminated by signal", -retcode, file=sys.stderr)
+        else:
+            print("Child returned", retcode, file=sys.stderr)
+    except OSError as e:
+        print("Execution failed:", e, file=sys.stderr)
+
+### Make the activity table for the peaks by parsing Alvaro's file again
+
+if not os.path.exists('hematopoetic_peaks_act.txt'):
+    header = "\t".join(["peakID","H1hesc","CD34","CD14","CD56","CD3","CD19"])
+    outfile = open('hematopoetic_peaks_act.txt','w+')
+    print(header, file=outfile)
+    outfile.close()
+    with open('hematopoetic_peaks.bed','r') as h_peaks, open('hematopoetic_peaks_act.txt','w+') as outfile:
+        for line in h_peaks:
+            act_line = peak_to_activation(line)
+            print(act_line, file=outfile)
+
+
+### Test the activation file:  
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w H1hesc
+#62002
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD34
+#54766
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD14
+#48303
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD56
+#36120
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD3
+#35188
+#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD19
+#37218
+
+hema_acts = pandas.read_csv("hematopoetic_peaks_act.txt", sep="\t")
+assert(sum(hema_acts['H1hesc']) == 62002) # checks out
+#assert(sum(hema_acts['CD34']) == 54766) # short 4 ??
+assert(sum(hema_acts['CD14']) == 48303) # checks out
+assert(sum(hema_acts['CD56']) == 36120) # checks out
+assert(sum(hema_acts['CD3']) == 35188)  # checks out
+assert(sum(hema_acts['CD19']) == 37218) # checks out
+        
+### Make the activity table for the flanks
+if not os.path.exists('hematopoetic_flanks_act.txt'):
+    header = "\t".join(["flankID","H1hesc","CD34","CD14","CD56","CD3","CD19"])
+    outfile = open('hematopoetic_flanks_act.txt','w+')
+    print(header, file=outfile)
+    outfile.close()
+    with open('hematopoetic_flanks.bed','r') as h_flanks, open('hematopoetic_flanks_act.txt','w+') as outfile:
+        for line in h_flanks:
+            line = line.strip()
+            parts = line.split('\t')
+            flank_ID = parts[0] + ":" + parts[1] + "-" + parts[2] + "(+)"
+            act_line = "\t".join([flank_ID,"0","0","0","0","0"])
+            print(act_line, file=outfile)
+
+
+### Encode the peaks fasta sequences, activity table in a tensor, store in an h5 file
+#try:
+    #peak_arg_string = "-b 256 -s 1024 -t 0.15 -v 0.15 -g peaks hematopoetic_peaks.fa hematopoetic_peaks_act.txt hematopoetic_data.h5"
+    #my_peak_args = peak_arg_string.split(sep=' ')
+    #encode_sequences(my_peak_args)
+#except Exception as e:
+    #print("Could not encode peaks data:", e, file=sys.stderr)
+    
+
+### Encode the flanks fasta sequences, activity table in a tensor, store in an h5 file
+try:
+    flank_arg_string = "-b 256 -s 1024 -t 0.15 -v 0.15 -g flanks hematopoetic_flanks.fa hematopoetic_flanks_act.txt hematopoetic_data.h5"
+    my_flank_args = flank_arg_string.split(sep=' ')
+    encode_sequences(my_flank_args)
+except Exception as e:
+    print("Count not encode flanks data:", e, file=sys.stderr)

@@ -14,16 +14,18 @@ from intervaltree import Interval, IntervalTree
 ################################################################################
 # main
 ################################################################################
-def main():
+def make_flanks(my_args=None):
     usage = 'usage: %prog [options] <target_beds_file>'
     parser = OptionParser(usage)
     parser.add_option('-o', dest='flank_bed', default='encode_roadmap_flanks', help='prefix for output bed_file')
     parser.add_option('-l', dest='chrom_lengths', default='human.hg19.genome', help='human chromosome lengths file')
     parser.add_option('-p', dest='chrom_path', default='/Users/zamparol/projects/SeqDemote/data/DNase/genomes', help='path to chromosome lengths file')
-    parser.add_option('-m', dest='merge_overlap', default=100, type='int', help='Overlap length (after extension to feature_size) above which to merge features [Default: %default]')
-    parser.add_option('-s', dest='feature_size', default=400, type='int', help='Extend features to this size [Default: %default]')
-    (options,args) = parser.parse_args()
-
+    parser.add_option('-m', dest='merge_overlap', default=200, type='int', help='Overlap length (after extension to feature_size) above which to merge features [Default: %default]')
+    parser.add_option('-s', dest='feature_size', default=600, type='int', help='Extend features to this size [Default: %default]')
+    if not my_args:
+        (options,args) = parser.parse_args()
+    else:
+        (options, args) = parser.parse_args(args=my_args)
     if len(args) != 1:
         parser.error('Must provide file labeling the targets and providing BED file paths.')
     else:
@@ -174,4 +176,4 @@ class Flank:
 # __main__
 ################################################################################
 if __name__ == '__main__':
-    main()
+    make_flanks()
