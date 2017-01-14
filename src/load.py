@@ -6,55 +6,27 @@ import generators
 import os
 import buffering
 import h5py
+from abc import ABCMeta, abstractmethod
 
 class DataLoader(object):
+    __metaclass__ = ABCMeta
+    
     params = {} # attributes that need to be stored after training and loaded at test time.
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-        #if not hasattr(self, 'validation_split_path'):
-            #self.validation_split_path = DEFAULT_VALIDATION_SPLIT_PATH
-            #print "using default validation split: %s" % self.validation_split_path
-        #else:
-            #print "using NON-default validation split: %s" % self.validation_split_path
-
+    @abstractmethod
     def load_train(self):   
-        h5file = self.get_h5_handle(self.data_path)
-        train_in = h5file['/train_in']
-        self.train_set_size = train_in.shape[0]
-        train_out = h5file['/train_out']
-        self.train_in = np.zeros(train_in.shape,dtype=train_in.dtype)
-        self.train_in[:] = train_in[:]
-        
-        self.train_out = np.zeros(train_out.shape, dtype=train_out.dtype)
-        self.train_out[:] = train_out[:]
-        
-        h5file.close()
-
+        pass
+    
+    @abstractmethod
     def load_test(self):
-        h5file = self.get_h5_handle(self.data_path)
-        test_in = h5file['/test_in']
-        test_out = h5file['test_out']
+        pass
         
-        self.test_in = np.zeros(test_in.shape, dtype=test_in.dtype)
-        self.test_in[:] = test_in[:]
-        
-        self.test_out = np.zeros(test_out.shape, dtype=test_out.dtype)
-        self.test_out[:] = test_out[:]
-        h5file.close()
-        
+    @abstractmethod    
     def load_validation(self):
-        h5file = self.get_h5_handle(self.data_path)
-        valid_in = h5file['/valid_in']
-        valid_out = h5file['valid_out']
-        self.valid_set_size = valid_in.shape[0]
-        
-        self.valid_in = np.zeros(valid_in.shape, dtype=valid_in.dtype)
-        self.valid_in[:] = valid_in[:]
-        self.valid_out = np.zeros(valid_out.shape, dtype=valid_out.dtype)
-        self.valid_out[:] = valid_out[:]
-        h5file.close()
+        pass
 
     def get_params(self):
         return { pname: getattr(self, pname, None) for pname in self.__dict__ }
@@ -72,7 +44,113 @@ class DataLoader(object):
         return my_path
 
 
-class DNaseDataLoader(DataLoader):
+class HematopoeticDataLoader(DataLoader):
+    
+    def __init__(self, **kwargs):
+        DataLoader.__init__(self)
+        self.__dict__.update(kwargs)
+        if not hasattr(self, 'data_path'):
+            self.data_path = os.path.abspath("../data/DNase/hematopoetic_data.h5")
+        if not hasattr(self, 'peaks_vs_flanks'):
+            self.peaks_vs_flanks = False
+            
+    def load_train(self):
+        h5file = self.get_h5_handle(self.data_path)
+        peaks_train_in = h5file['/peaks/data/train_in']
+        flanks_train_in = h5file['/flanks/data/train_in']
+        n_peaks = peaks_train_in.shape[0]
+        n_flanks = flanks_train_in.shape[0]
+        self.train_set_size = n_peaks + n_flanks
+        train_set_shape = tuple([n_peaks + n_flanks, peaks_train_in.shape[1], peaks_train_in.shape[2], peaks_train_in.shape[3]])
+        self.train_in = np.zeros(train_set_shape, dtype=peaks_train_in.dtype)
+        self.train_in[0:n_peaks,:,:,:] = peaks_train_in[:]
+        self.train_in[n_peaks:n_peaks+n_flanks,:,:,:] = flanks_train_in[:]
+        
+        peaks_train_out = h5file['/peaks/labels/train_out']
+        flanks_train_out = h5file['/flanks/labels/train_out']
+        if self.peaks_vs_flanks:
+            self.train_out = np.zeros(tuple(n_peaks + n_flanks,1), dtype=peaks_train_out.dtype)
+            self.train_out[0:n_peaks] = 1
+        else:
+            self.train_out = np.zeros(tuple(n_peaks + n_flanks,peaks_train_out.shape[1]), dtype=peaks_train_out.dtype)
+            self.train_out[0:n_peaks,:] = peaks_train_out[:]
+            self.train_out[n_peaks:n_peaks+n_flanks,:] = flanks_train_out[:]
+        
+        h5file.close()
+    
+    def load_test(self):
+        h5file = self.get_h5_handle(self.data_path)
+        peaks_test_in = h5file['/peaks/data/test_in']
+        flanks_test_in = h5file['/flanks/data/test_in']
+        n_peaks = peaks_test_in.shape[0]
+        n_flanks = flanks_test_in.shape[0]
+        self.test_set_size = n_peaks + n_flanks
+        test_set_shape = tuple([n_peaks + n_flanks, peaks_test_in.shape[1], peaks_test_in.shape[2], peaks_test_in.shape[3]])
+        self.test_in = np.zeros(test_set_shape, dtype=peaks_test_in.dtype)
+        self.test_in[0:n_peaks,:,:,:] = peaks_test_in[:]
+        self.test_in[n_peaks:n_peaks+n_flanks,:,:,:] = flanks_test_in[:]
+        
+        peaks_test_out = h5file['/peaks/labels/test_out']
+        flanks_test_out = h5file['/flanks/labels/test_out']
+        if self.peaks_vs_flanks:
+            self.test_out = np.zeros(tuple(n_peaks + n_flanks,1), dtype=peaks_test_in.dtype)
+            self.test_out[0:n_peaks] = 1
+        else:
+            self.test_out = np.zeros(tuple(n_peaks + n_flanks,peaks_test_out.shape[1]), dtype=peaks_test_out.dtype)
+            self.test_out[0:n_peaks,:] = peaks_test_out[:]
+            self.test_out[n_peaks:n_peaks+n_flanks,:] = flanks_test_out[:]
+        
+        h5file.close()
+    
+    def load_valid(self):
+        h5file = self.get_h5_handle(self.data_path)
+        peaks_valid_in = h5file['/peaks/data/valid_in']
+        flanks_valid_in = h5file['/flanks/data/valid_in']
+        n_peaks = peaks_valid_in.shape[0]
+        n_flanks = flanks_valid_in.shape[0]
+        self.valid_set_size = n_peaks + n_flanks
+        valid_set_shape = tuple([n_peaks + n_flanks, peaks_valid_in.shape[1], peaks_valid_in.shape[2], peaks_valid_in.shape[3]])
+        self.valid_in = np.zeros(valid_set_shape, dtype=peaks_valid_in.dtype)
+        self.valid_in[0:n_peaks,:,:,:] = peaks_valid_in[:]
+        self.valid_in[n_peaks:n_peaks+n_flanks,:,:,:] = flanks_valid_in[:]
+        
+        peaks_valid_out = h5file['/peaks/labels/valid_out']
+        flanks_valid_out = h5file['/flanks/labels/valid_out']
+        if self.peaks_vs_flanks:
+            self.valid_out = np.zeros(tuple(n_peaks + n_flanks,1),dtype = peaks_valid_in.dtype)
+            self.valid_out[0:n_peaks] = 1
+        else:
+            self.valid_out = np.zeros(tuple(n_peaks + n_flanks,peaks_valid_out.shape[1]), dtype=peaks_valid_out.dtype)
+            self.valid_out[0:n_peaks,:] = peaks_valid_out[:]
+            self.valid_out[n_peaks:n_peaks+n_flanks,:] = flanks_valid_out[:]
+            
+        h5file.close()
+    
+    def create_batch_gen(self, chunk_size=4096, num_chunks=20):
+        if not hasattr(self, 'train_in'):
+            self.load_train()
+        return generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
+    
+    def create_buffered_gen(self, chunk_size=4096, num_chunks=20):
+        if not hasattr(self, 'train_in'):
+            self.load_train()
+        gen = generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
+        return buffering.buffered_gen_threaded(gen)   
+    
+    def create_valid_gen(self, chunk_size=4096, num_chunks=20):
+        if not hasattr(self, 'valid_in'):
+            self.load_validation()
+            
+        return generators.train_sequence_gen(self.valid_in, self.valid_out, chunk_size, num_chunks)
+    
+    def create_buffered_valid_gen(self, chunk_size=4096, num_chunks=20):
+        if not hasattr(self, 'valid_in'):
+            self.load_valid()
+                    
+        gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
+        return buffering.buffered_gen_threaded(gen) 
+
+class BassetDataLoader(DataLoader):
     
     def __init__(self, **kwargs):
         DataLoader.__init__(self)
@@ -80,7 +158,43 @@ class DNaseDataLoader(DataLoader):
         if not hasattr(self, 'data_path'):
             self.data_path = os.path.abspath("../data/DNase/encode_roadmap_all.h5")
         
+    def load_train(self):
+        h5file = self.get_h5_handle(self.data_path)
+        train_in = h5file['/train_in']
+        self.train_set_size = train_in.shape[0]
+        train_out = h5file['/train_out']
+        self.train_in = np.zeros(train_in.shape,dtype=train_in.dtype)
+        self.train_in[:] = train_in[:]
+        
+        self.train_out = np.zeros(train_out.shape, dtype=train_out.dtype)
+        self.train_out[:] = train_out[:]
+        
+        h5file.close()    
+        
+    def load_test(self):
+        h5file = self.get_h5_handle(self.data_path)
+        test_in = h5file['/test_in']
+        test_out = h5file['test_out']
     
+        self.test_in = np.zeros(test_in.shape, dtype=test_in.dtype)
+        self.test_in[:] = test_in[:]
+    
+        self.test_out = np.zeros(test_out.shape, dtype=test_out.dtype)
+        self.test_out[:] = test_out[:]
+        h5file.close()  
+        
+    def load_validation(self):
+        h5file = self.get_h5_handle(self.data_path)
+        valid_in = h5file['/valid_in']
+        valid_out = h5file['valid_out']
+        self.valid_set_size = valid_in.shape[0]
+    
+        self.valid_in = np.zeros(valid_in.shape, dtype=valid_in.dtype)
+        self.valid_in[:] = valid_in[:]
+        self.valid_out = np.zeros(valid_out.shape, dtype=valid_out.dtype)
+        self.valid_out[:] = valid_out[:]
+        h5file.close()        
+        
     def create_batch_gen(self, chunk_size=4096, num_chunks=458):
         if not hasattr(self, 'train_in'):
             self.load_train()
@@ -116,14 +230,16 @@ class DNaseDataLoader(DataLoader):
         return generators.train_sequence_gen(self.valid_in, self.valid_out, my_chunk_size, my_num_chunks)
          
     def create_buffered_valid_gen(self, chunk_size, num_chunks):
-        if not hasattr(self, 'train_in'):
+        if not hasattr(self, 'valid_in'):
             self.load_valid()
                     
         gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen)    
         
 
-class KmerDataLoader(DataLoader):
+
+
+class KmerDataLoader(BassetDataLoader):
     
     def __init__(self, **kwargs):
         DataLoader.__init__(self)
@@ -193,26 +309,6 @@ class KmerDataLoader(DataLoader):
         return generators.train_kmerize_gen_mismatch(self.valid_in, self.valid_out, 
                                             self.kmer_length, my_chunk_size, my_num_chunks)            
 
-class RescaledDataLoader(DataLoader):
-    def create_random_gen(self, images, labels):
-        gen = generators.rescaled_patches_gen_augmented(images, labels, self.estimate_scale, patch_size=self.patch_size,
-            chunk_size=self.chunk_size, num_chunks=self.num_chunks_train, augmentation_params=self.augmentation_params)
 
-        def random_gen():
-            for chunk_x, chunk_y, chunk_shape in gen:
-                yield [chunk_x[:, None, :, :]], chunk_y
-
-        return buffering.buffered_gen_threaded(random_gen())
-
-    def create_fixed_gen(self, images, augment=False):
-        augmentation_transforms = self.augmentation_transforms_test if augment else None
-        gen = generators.rescaled_patches_gen_fixed(images, self.estimate_scale, patch_size=self.patch_size,
-            chunk_size=self.chunk_size, augmentation_transforms=augmentation_transforms)
-        
-        def fixed_gen():
-            for chunk_x, chunk_shape, chunk_length in gen:
-                yield [chunk_x[:, None, :, :]], chunk_length
-
-        return buffering.buffered_gen_threaded(fixed_gen())
 
 

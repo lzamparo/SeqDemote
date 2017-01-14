@@ -1,11 +1,11 @@
 from __future__ import print_function
-import data_load_utils as utils
+import data_load_utils as dlu
 
 import functools
 import nose
 from nose.tools import eq_
 
-import dna_io
+from utils import dna_io
 import numpy as np
 
 ''' fixtures '''
@@ -29,7 +29,7 @@ def expected_failure(test):
 
 @expected_failure
 def test_kmer_end_to_end_caps_vs_lc():
-    test_seqs = utils.load_data_from_file(lc_vs_UC_file)
+    test_seqs = dlu.load_data_from_file(lc_vs_UC_file)
         
     # encode
     encoded_test_seqs = []
@@ -63,7 +63,7 @@ def test_kmer_end_to_end_caps_vs_lc():
     
 @expected_failure
 def test_base_end_to_end_caps_vs_lc():
-    test_seqs = utils.load_data_from_file(lc_vs_UC_file)
+    test_seqs = dlu.load_data_from_file(lc_vs_UC_file)
         
     # encode
     encoded_test_seqs = []
@@ -97,7 +97,7 @@ def test_base_end_to_end_caps_vs_lc():
 
 @expected_failure
 def test_kmer_end_to_end_AAA_vs_lc():
-    test_seqs = utils.load_data_from_file(AAA_vs_lc_file)
+    test_seqs = dlu.load_data_from_file(AAA_vs_lc_file)
         
     # encode
     encoded_test_seqs = []
@@ -121,7 +121,7 @@ def test_kmer_end_to_end_AAA_vs_lc():
 
 @expected_failure
 def test_base_end_to_end_AAA_vs_lc():
-    test_seqs = utils.load_data_from_file(AAA_vs_lc_file)
+    test_seqs = dlu.load_data_from_file(AAA_vs_lc_file)
         
     # encode
     encoded_test_seqs = []

@@ -133,10 +133,10 @@ if not os.path.exists('hematopoetic_flanks.fa'):
 
 if not os.path.exists('hematopoetic_peaks_act.txt'):
     header = "\t".join(["peakID","H1hesc","CD34","CD14","CD56","CD3","CD19"])
-    outfile = open('hematopoetic_peaks_act.txt','w+')
+    outfile = open('hematopoetic_peaks_act.txt','w')
     print(header, file=outfile)
     outfile.close()
-    with open('hematopoetic_peaks.bed','r') as h_peaks, open('hematopoetic_peaks_act.txt','w+') as outfile:
+    with open('hematopoetic_peaks.bed','r') as h_peaks, open('hematopoetic_peaks_act.txt','a') as outfile:
         for line in h_peaks:
             act_line = peak_to_activation(line)
             print(act_line, file=outfile)
@@ -167,25 +167,25 @@ assert(sum(hema_acts['CD19']) == 37218) # checks out
 ### Make the activity table for the flanks
 if not os.path.exists('hematopoetic_flanks_act.txt'):
     header = "\t".join(["flankID","H1hesc","CD34","CD14","CD56","CD3","CD19"])
-    outfile = open('hematopoetic_flanks_act.txt','w+')
+    outfile = open('hematopoetic_flanks_act.txt','w')
     print(header, file=outfile)
     outfile.close()
-    with open('hematopoetic_flanks.bed','r') as h_flanks, open('hematopoetic_flanks_act.txt','w+') as outfile:
+    with open('hematopoetic_flanks.bed','r') as h_flanks, open('hematopoetic_flanks_act.txt','a') as outfile:
         for line in h_flanks:
             line = line.strip()
             parts = line.split('\t')
             flank_ID = parts[0] + ":" + parts[1] + "-" + parts[2] + "(+)"
-            act_line = "\t".join([flank_ID,"0","0","0","0","0"])
+            act_line = "\t".join([flank_ID,"0","0","0","0","0","0"])
             print(act_line, file=outfile)
 
 
 ### Encode the peaks fasta sequences, activity table in a tensor, store in an h5 file
-#try:
-    #peak_arg_string = "-b 256 -s 1024 -t 0.15 -v 0.15 -g peaks hematopoetic_peaks.fa hematopoetic_peaks_act.txt hematopoetic_data.h5"
-    #my_peak_args = peak_arg_string.split(sep=' ')
-    #encode_sequences(my_peak_args)
-#except Exception as e:
-    #print("Could not encode peaks data:", e, file=sys.stderr)
+try:
+    peak_arg_string = "-b 256 -s 1024 -t 0.15 -v 0.15 -g peaks hematopoetic_peaks.fa hematopoetic_peaks_act.txt hematopoetic_data.h5"
+    my_peak_args = peak_arg_string.split(sep=' ')
+    encode_sequences(my_peak_args)
+except Exception as e:
+    print("Could not encode peaks data:", e, file=sys.stderr)
     
 
 ### Encode the flanks fasta sequences, activity table in a tensor, store in an h5 file

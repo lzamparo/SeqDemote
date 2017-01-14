@@ -34,6 +34,7 @@ chunk_out_shape = (chunk_size,output_size)
 batch_train_shape = (batch_size,4,1,600)
 
 path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap_all.h5")
+heme_path = os.path.expanduser("~/projects/SeqDemote/data/DNase/hematopoetic_data.h5")
 
 
 ### Kmer fixtures
@@ -60,20 +61,20 @@ fourmer_chunk_shape = (chunk_size, alphabet_size_4, 1, 597)
 
 def test_build_data_loader():
     """ Can I build a data loader for the DNase data """
-    data_loader = load.DNaseDataLoader()
+    data_loader = load.BassetDataLoader()
     data_loader.load_train()
     eq_(data_loader.train_in.shape, full_train_shape)
     
 def test_build_data_loader_kwargs():
     """ Can I build a data loader for the DNase data specifying the data path """
     
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_train()
     eq_(data_loader.train_in.shape, full_train_shape)    
 
 def test_dnase_data_shape():
     """ Is my DNase data the right size and shape """
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_train()
     num_chunks = range(num_chunks_train)
     for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_batch_gen()):
@@ -84,7 +85,7 @@ def test_dnase_data_shape():
 def test_exhaust_data():
     """ If I iterate through all the chunks, how many data points do I see? """
     seen_pts = 0
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_train()
     num_chunks = range(num_chunks_train)
     for e, (x_chunk, y_chunk) in zip(num_chunks,data_loader.create_batch_gen()):
@@ -97,7 +98,7 @@ def test_exhaust_data():
     
 def test_training_batch_encoding_sum():
     """ If I sum all elements of a chunk of training data, do I get the number of expected ones? """
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_train()
     num_chunks = range(num_chunks_train)
     expected_chunk_sum = 600 * chunk_size
@@ -109,7 +110,7 @@ def test_training_batch_encoding_sum():
         
 def test_validation_batch_encoding_sum():
     """ If I sum all elements of a chunk of validation data, do I get the number of expected ones? """
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_validation()
     num_chunks = range(num_chunks_train)
     expected_chunk_sum = 600 * chunk_size
@@ -122,7 +123,7 @@ def test_validation_batch_encoding_sum():
         
 def test_any_always_negatives_training():
     """ Are there any always-negative examples in the training set? """
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_train()    
     for e, (x_chunk, y_chunk) in zip(range(num_chunks_train),data_loader.create_batch_gen()):
         for label_vector in y_chunk:
@@ -131,7 +132,7 @@ def test_any_always_negatives_training():
             
 def test_any_always_negatives_validation():
     """ Are there any always-negative examples in the validation set? """
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_validation()    
     for e, (x_chunk, y_chunk) in zip(range(num_chunks_valid),data_loader.create_valid_gen()):
         for label_vector in y_chunk:
@@ -143,7 +144,7 @@ def test_enumerate_malformed_validation_data():
     """ How many mal-encoded validation data do we have? """
     
     raise SkipTest
-    data_loader = load.DNaseDataLoader(data_path=path)
+    data_loader = load.BassetDataLoader(data_path=path)
     data_loader.load_validation()
     num_chunks = range(num_chunks_train)
     expected_chunk_sum = 600 * chunk_size

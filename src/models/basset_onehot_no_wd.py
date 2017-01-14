@@ -32,7 +32,7 @@ learning_rate_schedule = {
 
 validate_every = 1
 save_every = 5
-data_loader = load.DNaseDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
+data_loader = load.BassetDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
 
 # Refs to lasagne conv layers
 Conv2DLayer = nn.layers.Conv2DLayer
