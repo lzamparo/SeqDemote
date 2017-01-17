@@ -52,7 +52,7 @@ class HematopoeticDataLoader(DataLoader):
         if not hasattr(self, 'data_path'):
             self.data_path = os.path.abspath("../data/DNase/hematopoetic_data.h5")
         if not hasattr(self, 'peaks_vs_flanks'):
-            self.peaks_vs_flanks = False
+            self.peaks_vs_flanks = True
             
     def load_train(self):
         h5file = self.get_h5_handle(self.data_path)
@@ -69,10 +69,10 @@ class HematopoeticDataLoader(DataLoader):
         peaks_train_out = h5file['/peaks/labels/train_out']
         flanks_train_out = h5file['/flanks/labels/train_out']
         if self.peaks_vs_flanks:
-            self.train_out = np.zeros(tuple(n_peaks + n_flanks,1), dtype=peaks_train_out.dtype)
+            self.train_out = np.zeros(tuple([n_peaks + n_flanks,1]), dtype=peaks_train_out.dtype)
             self.train_out[0:n_peaks] = 1
         else:
-            self.train_out = np.zeros(tuple(n_peaks + n_flanks,peaks_train_out.shape[1]), dtype=peaks_train_out.dtype)
+            self.train_out = np.zeros(tuple([n_peaks + n_flanks,peaks_train_out.shape[1]]), dtype=peaks_train_out.dtype)
             self.train_out[0:n_peaks,:] = peaks_train_out[:]
             self.train_out[n_peaks:n_peaks+n_flanks,:] = flanks_train_out[:]
         
@@ -93,10 +93,10 @@ class HematopoeticDataLoader(DataLoader):
         peaks_test_out = h5file['/peaks/labels/test_out']
         flanks_test_out = h5file['/flanks/labels/test_out']
         if self.peaks_vs_flanks:
-            self.test_out = np.zeros(tuple(n_peaks + n_flanks,1), dtype=peaks_test_in.dtype)
+            self.test_out = np.zeros(tuple([n_peaks + n_flanks,1]), dtype=peaks_test_in.dtype)
             self.test_out[0:n_peaks] = 1
         else:
-            self.test_out = np.zeros(tuple(n_peaks + n_flanks,peaks_test_out.shape[1]), dtype=peaks_test_out.dtype)
+            self.test_out = np.zeros(tuple([n_peaks + n_flanks,peaks_test_out.shape[1]]), dtype=peaks_test_out.dtype)
             self.test_out[0:n_peaks,:] = peaks_test_out[:]
             self.test_out[n_peaks:n_peaks+n_flanks,:] = flanks_test_out[:]
         
@@ -117,21 +117,21 @@ class HematopoeticDataLoader(DataLoader):
         peaks_valid_out = h5file['/peaks/labels/valid_out']
         flanks_valid_out = h5file['/flanks/labels/valid_out']
         if self.peaks_vs_flanks:
-            self.valid_out = np.zeros(tuple(n_peaks + n_flanks,1),dtype = peaks_valid_in.dtype)
+            self.valid_out = np.zeros(tuple([n_peaks + n_flanks,1]),dtype = peaks_valid_in.dtype)
             self.valid_out[0:n_peaks] = 1
         else:
-            self.valid_out = np.zeros(tuple(n_peaks + n_flanks,peaks_valid_out.shape[1]), dtype=peaks_valid_out.dtype)
+            self.valid_out = np.zeros(tuple([n_peaks + n_flanks,peaks_valid_out.shape[1]]), dtype=peaks_valid_out.dtype)
             self.valid_out[0:n_peaks,:] = peaks_valid_out[:]
             self.valid_out[n_peaks:n_peaks+n_flanks,:] = flanks_valid_out[:]
             
         h5file.close()
     
-    def create_batch_gen(self, chunk_size=4096, num_chunks=20):
+    def create_batch_gen(self, chunk_size=4096, num_chunks=58):
         if not hasattr(self, 'train_in'):
             self.load_train()
         return generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
     
-    def create_buffered_gen(self, chunk_size=4096, num_chunks=20):
+    def create_buffered_gen(self, chunk_size=4096, num_chunks=58):
         if not hasattr(self, 'train_in'):
             self.load_train()
         gen = generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
@@ -143,7 +143,7 @@ class HematopoeticDataLoader(DataLoader):
             
         return generators.train_sequence_gen(self.valid_in, self.valid_out, chunk_size, num_chunks)
     
-    def create_buffered_valid_gen(self, chunk_size=4096, num_chunks=20):
+    def create_buffered_valid_gen(self, chunk_size=4096, num_chunks=12):
         if not hasattr(self, 'valid_in'):
             self.load_valid()
                     

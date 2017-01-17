@@ -63,21 +63,37 @@ def expected_failure(test):
             raise AssertionError('Failure expected')
     return inner
 
-### DNase data fixtures
-train_size = 3201397
-valid_size = 70000
-output_size = 164
+
+### Common shape fixture params
+
 chunk_size = 4096
 batch_size = 128
-num_chunks_train = train_size // chunk_size
-num_chunks_valid = valid_size // chunk_size
-
-full_train_shape = (train_size, 4, 1, 600)
-chunk_train_shape = (chunk_size,4,1,600)
-chunk_out_shape = (chunk_size,output_size)
 batch_train_shape = (batch_size,4,1,600)
+chunk_train_shape = (chunk_size,4,1,600)
 
-path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap.h5")
+### Basset DNase data fixtures
+basset_train_size = 3201397  
+basset_valid_size = 70000
+basset_output_size = 164
+
+basset_num_chunks_train = basset_train_size // chunk_size
+basset_num_chunks_valid = basset_valid_size // chunk_size
+basset_full_train_shape = (basset_train_size, 4, 1, 600)
+basset_chunk_out_shape = (chunk_size,basset_output_size)
+
+basset_path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap_all.h5")
+
+### Heme DNase data fixtures
+heme_train_size = 240943
+heme_valid_size = 51638
+heme_output_size = 6
+
+heme_num_chunks_train = heme_train_size // chunk_size
+heme_num_chunks_valid = heme_valid_size // chunk_size
+heme_full_train_shape = (heme_train_size, 4, 1, 600)
+heme_chunk_out_shape = (chunk_size, heme_output_size)
+
+heme_path = os.path.expanduser("~/projects/SeqDemote/data/DNase/hematopoetic_data.h5")
 
 ### Kmer fixtures
 
@@ -92,64 +108,117 @@ fivemer_chunk_shape = (chunk_size, alphabet_size_5, 1, 596)
 
 ### 
 
-h5file = h5py.File(path)
-train_in = h5file['/train_in']
-train_out = h5file['/train_out']
-training_data = np.zeros(train_in.shape, dtype=train_in.dtype)
-training_data[:] = train_in[:]
-training_targets = np.zeros(train_out.shape,dtype=train_out.dtype)
-h5file.close()
 
-def get_training_data():
+def get_basset_training_data(basset_path):
+    h5file = h5py.File(basset_path)
+    train_in = h5file['/train_in']
+    train_out = h5file['/train_out']
+    training_data = np.zeros(train_in.shape, dtype=train_in.dtype)
+    training_data[:] = train_in[:]
+    training_targets = np.zeros(train_out.shape,dtype=train_out.dtype)
+    h5file.close()
+    
     return training_data, training_targets
+
+def get_heme_training_data(heme_path,peaks_vs_flanks=True):
+    h5file = h5py.File(heme_path)
+    peaks_train_in = h5file['/peaks/data/train_in']
+    flanks_train_in = h5file['/flanks/data/train_in']
+    n_peaks = peaks_train_in.shape[0]
+    n_flanks = flanks_train_in.shape[0]
+    train_set_size = n_peaks + n_flanks
+    train_set_shape = tuple([n_peaks + n_flanks, peaks_train_in.shape[1], peaks_train_in.shape[2], peaks_train_in.shape[3]])
+    train_in = np.zeros(train_set_shape, dtype=peaks_train_in.dtype)
+    train_in[0:n_peaks,:,:,:] = peaks_train_in[:]
+    train_in[n_peaks:n_peaks+n_flanks,:,:,:] = flanks_train_in[:]
+
+    peaks_train_out = h5file['/peaks/labels/train_out']
+    flanks_train_out = h5file['/flanks/labels/train_out']
+    if peaks_vs_flanks:
+        train_out = np.zeros(tuple([n_peaks + n_flanks,1]), dtype=peaks_train_out.dtype)
+        train_out[0:n_peaks] = 1
+    else:
+        train_out = np.zeros(tuple([n_peaks + n_flanks,peaks_train_out.shape[1]]), dtype=peaks_train_out.dtype)
+        train_out[0:n_peaks,:] = peaks_train_out[:]
+        train_out[n_peaks:n_peaks+n_flanks,:] = flanks_train_out[:]
+
+    h5file.close() 
+    return train_in, train_out
 
 ### Structure, shape based tests
 
-def test_create_batch_gen():
+def test_create_basset_batch_gen():
     """ Can I build a batch generator? """
-    training_data, training_targets = get_training_data()
+    training_data, training_targets = get_basset_training_data(basset_path)
     my_gen = generators.train_sequence_gen(training_data, training_targets)
-    for e, (x_chunk, y_chunk) in zip(range(num_chunks_train), my_gen):
+    for e, (x_chunk, y_chunk) in zip(range(basset_num_chunks_train), my_gen):
+        ok_(x_chunk.shape == chunk_train_shape)
+        
+
+def test_create_heme_batch_gen():
+    """ Can I build a hematopoetic batch generator? """
+    training_data, training_targets = get_heme_training_data(heme_path)
+    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    for e, (x_chunk, y_chunk) in zip(range(heme_num_chunks_train), my_gen):
         ok_(x_chunk.shape == chunk_train_shape)
 
+def test_create_buffered_heme_batch_gen():
+    """ Can i build a buffered batch generator from the hematopoetic data? """
+    training_data, training_targets = get_heme_training_data(heme_path)
+    my_buffered_gen = buffering.buffered_gen_threaded(generators.train_sequence_gen(training_data, training_targets))
+    num_chunks = range(heme_num_chunks_train)
+    seen_pts = 0
+    for e, (x_chunk, y_chunk) in zip(num_chunks, my_buffered_gen):
+        seen_pts += x_chunk.shape[0]
+        ok_(y_chunk.shape == (chunk_size,1))
+    print("saw ", seen_pts, " points, expecting ", heme_train_size, " points")
+    ok_((seen_pts == heme_train_size) or (abs(seen_pts - heme_train_size) < chunk_size))
+    
+        
+def test_peaks_vs_flanks_gen():
+    """ Does the Hematopoetic data generator return peaks vs flanks output? """
+    training_data, training_targets = get_heme_training_data(heme_path)
+    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    for e, (x_chunk, y_chunk) in zip(range(heme_num_chunks_train), my_gen):
+        ok_(y_chunk.shape == (chunk_size,1))        
 
 def test_exhaust_data():
     """ If I iterate through all the chunks, how many data points do I see? """
     
-    training_data, training_targets = get_training_data()
+    training_data, training_targets = get_basset_training_data()
     seen_pts = 0
-    num_chunks = range(num_chunks_train)
+    num_chunks = range(basset_num_chunks_train)
     my_gen = generators.train_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
-    ok_(seen_pts <= train_size)
+    ok_(seen_pts <= basset_train_size)
 
 
 def test_buffered_batch_gen_threaded():
     """ Can I create a buffered batch generator and exhaust the data? """
     
-    training_data, training_targets = get_training_data()
+    training_data, training_targets = get_basset_training_data(basset_path)
     my_gen = buffering.buffered_gen_threaded(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
-    num_chunks = range(num_chunks_train)
+    num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
-    ok_(seen_pts == train_size)
+    ok_((seen_pts == basset_train_size) or (abs(seen_pts - basset_train_size) < chunk_size))
     
  
 def test_buffered_batch_gen_mp():
     """ Can I create a buffered batch generator and exhaust the data? """
     
-    training_data, training_targets = get_training_data()
+    training_data, training_targets = get_basset_training_data(basset_path)
     my_gen = buffering.buffered_gen_mp(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
-    num_chunks = range(num_chunks_train)
+    num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
-    ok_(seen_pts == train_size)
+    ok_(seen_pts == basset_train_size)
     
 
 ### Kmerizing generators 
@@ -158,14 +227,14 @@ def test_buffered_batch_gen_mp():
 def test_buffered_kmerizing_gen():
     """ Can I create a buffered batch generator that kmerizes the data? """
     
-    training_data, training_targets = get_training_data()
+    training_data, training_targets = get_basset_training_data(basset_path)
     my_gen = buffering.buffered_gen_mp(generators.train_kmerize_gen(training_data, training_targets, kmersize=3), buffer_size=3)
-    num_chunks = range(num_chunks_train)
+    num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
-    ok_(seen_pts == train_size)
+    ok_(seen_pts == basset_train_size)
 
 
 
