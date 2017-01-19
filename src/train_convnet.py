@@ -77,6 +77,7 @@ givens = {
 }
    
 
+
 if hasattr(model_module, 'build_objective'):
     train_loss = model_module.build_objective(l_in, l_out, t, training_mode=True)
 else:
@@ -153,6 +154,11 @@ else:
 
 print("...Load data", flush=True)
 model_module.data_loader.load_train()
+
+if hasattr(model_module, 'task_type'):
+    task_type = model_module.task_type
+else:
+    task_type = 'mt_classification'
 
 if hasattr(model_module, 'create_train_gen'):
     create_train_gen = model_module.create_train_gen
@@ -231,16 +237,18 @@ for epoch in range(num_epochs):
             outputs.append(outputs_chunk)
             labels.append(y_chunk_valid)
 
+
         outputs = np.vstack(outputs)  ### dump these to a list, pickle the list
         loss = train_utils.log_loss(outputs, np.vstack(labels))
-        acc = train_utils.mt_accuracy(outputs, np.vstack(labels))
-        precision = train_utils.mt_precision(outputs, np.vstack(labels))
+        if task_type != 'mt_classificaiton':
+            acc = train_utils.st_accuracy(outputs, np.vstack(labels))
+        else:
+            acc = train_utils.mt_accuracy(outputs, np.vstack(labels))
+            precision = train_utils.mt_precision(outputs, np.vstack(labels))
         print("    validation loss:\t {0:.6f}.".format(loss))  ### dump these to a text file somewhere else
         print("    validation roc:\t {0:.2f}.".format(acc * 100))
-        print("    validation aupr:\t {0:.2f}".format(precision * 100))
         losses_valid_log.append(loss)
         losses_valid_auc.append(acc)
-        losses_valid_aupr.append(precision)
         del outputs
     
     

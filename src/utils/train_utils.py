@@ -34,6 +34,13 @@ def log_loss(y, t, eps=1e-15):
     losses = log_losses(y, t, eps)
     return np.mean(losses)
 
+def st_accuracy(y, t):
+    """ single-task (peak vs flank) ROC """
+    if not y.shape == t.shape:
+        print("Error in single task AUC: shape mismatch in y: ", y.shape, " and t: ", t.shape)
+        return -1
+    return roc_auc_score(y, t)
+
 def mt_accuracy(y, t):
     """ 
     multi-task ROC: the un-weighted average of task ROC scores
