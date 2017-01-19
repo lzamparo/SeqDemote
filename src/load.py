@@ -102,7 +102,7 @@ class HematopoeticDataLoader(DataLoader):
         
         h5file.close()
     
-    def load_valid(self):
+    def load_validation(self):
         h5file = self.get_h5_handle(self.data_path)
         peaks_valid_in = h5file['/peaks/data/valid_in']
         flanks_valid_in = h5file['/flanks/data/valid_in']
@@ -145,7 +145,7 @@ class HematopoeticDataLoader(DataLoader):
     
     def create_buffered_valid_gen(self, chunk_size=4096, num_chunks=12):
         if not hasattr(self, 'valid_in'):
-            self.load_valid()
+            self.load_validation()
                     
         gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen) 
@@ -231,7 +231,7 @@ class BassetDataLoader(DataLoader):
          
     def create_buffered_valid_gen(self, chunk_size, num_chunks):
         if not hasattr(self, 'valid_in'):
-            self.load_valid()
+            self.load_validation()
                     
         gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen)    
