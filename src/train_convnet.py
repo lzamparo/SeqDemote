@@ -36,7 +36,11 @@ model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
 expid = accounting.generate_expid(model_config)
-metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints", expid + ".pkl")
+if os.path.exists(os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints")):
+    metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints", expid + ".pkl")
+else:
+    metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', expid + ".pkl")
+    
 print("Experiment ID: ", expid)
 
 print("...Build model")
@@ -212,7 +216,7 @@ for epoch in range(num_epochs):
         epoch_train_loss.append(mean_train_loss)
         
     epoch_end_time = time.time()
-    losses_train.append(np.mean(epoch_train_loss))
+    losses_train.append(epoch_train_loss)
     print("Mean training loss:\t\t {0:.6f}.".format(np.mean(epoch_train_loss))) ### dump these to a text file somewhere else...
     print("Training for epoch ", epoch, " took ", epoch_end_time - epoch_start_time, "s", flush=True)
     
@@ -261,25 +265,22 @@ for epoch in range(num_epochs):
         eta_str = eta.strftime("%c")
         print(accounting.hms(time_since_start), " since start ", time_since_prev)
         print(" estimated time remaining: ", eta_str)
-    
-        ### Do we save the model state?
-        if ((epoch + 1) % model_module.save_every) == 0:
-            print("Saving metadata, parameters")
-     
-            with open(metadata_tmp_path, 'wb') as f:
-                chunks_trained = epoch * model_module.num_chunks_train
-                save_dict = {
-                    'configuration': model_config,
-                    'experiment_id': expid,
-                    'chunks_since_start': chunks_trained,
-                    'losses_train': losses_train,
-                    'losses_valid_xent': losses_valid_log,
-                    'losses_valid_auc': losses_valid_auc,
-                    'losses_valid_aupr': losses_valid_aupr,
-                    'time_since_start': time_since_start,
-                    'param_values': nn.layers.get_all_param_values(l_out)
-                }
-                pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)
+         
+        print("Saving metadata, parameters")
+        with open(metadata_tmp_path, 'wb') as f:
+            chunks_trained = epoch * model_module.num_chunks_train
+            save_dict = {
+                'configuration': model_config,
+                'experiment_id': expid,
+                'chunks_since_start': chunks_trained,
+                'losses_train': losses_train,
+                'losses_valid_xent': losses_valid_log,
+                'losses_valid_auc': losses_valid_auc,
+                'losses_valid_aupr': losses_valid_aupr,
+                'time_since_start': time_since_start,
+                'param_values': nn.layers.get_all_param_values(l_out)
+            }
+            pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)
     
             # terminate the previous copy operation if it hasn't finished
             #if copy_process is not None:
