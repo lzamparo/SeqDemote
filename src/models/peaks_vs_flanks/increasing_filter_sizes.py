@@ -15,6 +15,7 @@ data_cols = 600 # probably don't need this param specified here
 
 ### training params
 task_type = 'peaks_vs_flanks'
+save_dir = 'peaks_vs_flanks'
 
 batch_size = 128
 chunk_size = 4096

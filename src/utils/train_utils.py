@@ -1,7 +1,9 @@
 import numpy as np 
 import gzip
+import os
 from collections import OrderedDict
 from sklearn.metrics import roc_auc_score, average_precision_score
+
 
 ### Log-loss calculating utils
 
@@ -132,6 +134,6 @@ def accuracy_topn(y, t, n=5):
     return np.mean(accs)
 
 
-
-
+def find_project_root():
+    return os.path.expanduser("~/projects/SeqDemote/")
 

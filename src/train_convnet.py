@@ -36,10 +36,10 @@ model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
 expid = accounting.generate_expid(model_config)
-if os.path.exists(os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints")):
-    metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', "checkpoints", expid + ".pkl")
+if hasattr(model_module, save_dir) and os.path.exists(os.path.join(train_utils.find_project_root(), 'results')):
+    metadata_tmp_path = os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir, expid + ".pkl")
 else:
-    metadata_tmp_path = os.path.join(os.path.expanduser(os.getcwd()), 'models', expid + ".pkl")
+    metadata_tmp_path = os.path.join(train_utils.find_project_root(), 'results', expid + ".pkl")
     
 print("Experiment ID: ", expid)
 
