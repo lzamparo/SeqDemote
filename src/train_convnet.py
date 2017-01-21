@@ -36,6 +36,7 @@ model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
     
 expid = accounting.generate_expid(model_config)
+expid = expid.split('/')[-1]
 if hasattr(model_module, 'save_dir') and os.path.exists(os.path.join(train_utils.find_project_root(), 'results')):
     metadata_tmp_path = os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir, expid + ".pkl")
 else:
