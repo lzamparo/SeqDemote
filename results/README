@@ -1,1 +1,4 @@
 Results directory for tracking computational experiments peformed on data
+
+
+diagnostic_plots : contains the .png files resulting from plot_model_pkls.py
