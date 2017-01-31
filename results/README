@@ -1,4 +1,12 @@
 Results directory for tracking computational experiments peformed on data
 
 
-diagnostic_plots : contains the .png files resulting from plot_model_pkls.py
+- diagnostic_plots: contains the .png files resulting from plot_model_pkls.py
+|
+- peaks_vs_flanks: contains the .pkl model files for the peaks vs flanks experiments
+|
+- SeqGL: contains the .Rdata model files for Manu's SeqGL peaks vs flanks discrimination task
+| 
+- kmer_models: will eventually contain the kmer model tasks
+| 
+- basset_models: contains the results for the original basset models on the original basset dataset
