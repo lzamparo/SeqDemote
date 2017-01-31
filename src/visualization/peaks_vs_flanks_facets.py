@@ -26,9 +26,11 @@ SeqGL_mean = np.asarray(SeqGL_comparisons).mean()
 
 validation_auc = gg.ggplot(df_auc, gg.aes(x='epoch', y='validation AUC', color='model')) + \
     gg.geom_line(size=2.0) + \
-        gg.xlab('Epoch') + \
-        gg.ylab('Validation AUC') + \
-        gg.ggtitle('AUC of each model evaluated on the validation set')
+    gg.xlab('Epoch') + \
+    gg.ylab('Validation AUC') + \
+    gg.ggtitle('AUC of each model evaluated on the validation set') + \
+    gg.geom_hline(y=SeqGL_min, size=1.0, linetype='dashed') + \
+    gg.geom_hline(y=SeqGL_max, size=1.0, linetye='dashed')
 validation_auc.save(os.path.join(os.path.expanduser('~/projects/SeqDemote/results/diagnostic_plots/'),title_suffix,'validation_auc.png'))
 
 ### Plot all models validation error
