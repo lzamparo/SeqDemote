@@ -13,7 +13,7 @@ faceted_plot = gg.ggplot(df, gg.aes(x='epoch', y='score', color='model')) + \
     gg.geom_line(size=2.0) + \
     gg.xlab('Epoch') + \
     gg.ggtitle('AUC, validation loss, training loss for all Peaks vs Flanks models') + \
-    gg.facet_wrap('measure', scales='free_y', nrow=1)
+    gg.facet_wrap('measure', scales='free_y', ncol=1)
 faceted_plot.save(os.path.join(os.path.expanduser('~/projects/SeqDemote/results/diagnostic_plots/'),title_suffix,'pvf_facet_plots.png'))
 # fig, ax = plt.subplots(3, 1, figsize=(3 * 7.5, 3 * 5))
 
@@ -31,8 +31,7 @@ validation_auc = gg.ggplot(df_auc, gg.aes(x='epoch', y='score', color='model')) 
     gg.xlab('Epoch') + \
     gg.ylab('Validation AUC') + \
     gg.ggtitle('AUC of each model evaluated on the validation set') + \
-    gg.geom_hline(y=SeqGL_min, size=1.0, color='black',linetype='dashed') + \
-    gg.geom_hline(y=SeqGL_max, size=1.0, color='black',linetype='dashed')
+    gg.geom_hline(y=SeqGL_mean, size=1.0, color='black',linetype='dashed') 
 validation_auc.save(os.path.join(os.path.expanduser('~/projects/SeqDemote/results/diagnostic_plots/'),title_suffix,'validation_auc.png'))
 
 ### Plot all models validation error
