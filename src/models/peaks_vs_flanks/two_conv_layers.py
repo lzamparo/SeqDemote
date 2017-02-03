@@ -76,7 +76,7 @@ def build_objective(l_ins, l_out, targets, training_mode=True):
     return nn.objectives.aggregate(loss)
 
 
-def build_updates(train_loss, all_params, learning_rate, momentum):   
-    updates = nn.updates.rmsprop(train_loss, all_params, learning_rate, momentum)
+def build_updates(train_loss, all_params, learning_rate,):   
+    updates = nn.updates.adam(train_loss, all_params, learning_rate)
     #normed_updates = OrderedDict((param, nn.updates.norm_constraint(updates[param], weight_norm)) if param.ndim > 1 else (param, updates[param]) for param in updates)  
     return updates

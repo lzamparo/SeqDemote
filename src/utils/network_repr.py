@@ -1,7 +1,7 @@
 import sys, os
 import importlib.util
 import lasagne
-from lasagne.layers import get_all_layers
+from lasagne.layers import get_all_layers, count_params
 from collections import deque, defaultdict
 
 
@@ -62,6 +62,8 @@ def get_network_str(layer, get_network=True, incomings=False, outgoings=False):
         if outgoings:
             layer_str.append(outs[i])
         layer_str.append(str(current_layer))    # default representation can be changed by overriding __str__
+        layer_str.append(str(current_layer.output_shape))   # get the output shape for this layer
+        layer_str.append(str(count_params(current_layer)))
         network_str.append(layer_str)
     return _get_table_str(network_str)
 
@@ -75,6 +77,8 @@ def _insert_header(network_str, incomings, outgoings):
     if outgoings:
         line_1.append('--> Out')
     line_1.append('Description')
+    line_1.append('Output shape')
+    line_1.append('Cumulative params')
     line_2 = deque([])
     if incomings:
         line_2.append('-------')
@@ -82,6 +86,8 @@ def _insert_header(network_str, incomings, outgoings):
     if outgoings:
         line_2.append('-------')
     line_2.append('-----------')
+    line_2.append('------------')
+    line_2.append('-----------------')
     network_str.appendleft(line_2)
     network_str.appendleft(line_1)
     return network_str
