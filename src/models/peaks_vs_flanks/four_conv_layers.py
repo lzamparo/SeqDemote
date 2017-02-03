@@ -48,17 +48,17 @@ def build_model():
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
 
-    l2a = Conv2DLayer(l1c, num_filters=50, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l2a = Conv2DLayer(l1c, num_filters=100, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
     l2c = nn.layers.NonlinearityLayer(l2b)
     l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
 
-    l3a = Conv2DLayer(l2d, num_filters=40, filter_size=(1, 30), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l3a = Conv2DLayer(l2d, num_filters=100, filter_size=(1, 30), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l3b = BatchNormLayer(l3a)
     l3c = nn.layers.NonlinearityLayer(l3b)
     l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 4))
     
-    l4a = Conv2DLayer(l3d, num_filters=10, filter_size=(1, 40), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l4a = Conv2DLayer(l3d, num_filters=100, filter_size=(1, 40), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l4b = BatchNormLayer(l4a)
     l4c = nn.layers.NonlinearityLayer(l4b)
     l4d = MaxPool2DLayer(l4c, pool_size=(1, 8), stride=(1, 8))

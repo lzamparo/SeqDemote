@@ -70,17 +70,17 @@ BatchNormLayer = nn.layers.BatchNormLayer
 def build_model():
 
     l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
-    l1a = Conv2DLayer(l0, num_filters=50, filter_size=(1, 10), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l1a = Conv2DLayer(l0, num_filters=100, filter_size=(1, 10), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
     l1d = MaxPool2DLayer(l1c, pool_size=(1, 3), stride=(1, 3))
 
-    l2a = Conv2DLayer(l1d, num_filters=20, filter_size=(1, 15), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l2a = Conv2DLayer(l1d, num_filters=60, filter_size=(1, 15), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
     l2c = nn.layers.NonlinearityLayer(l2b)
     l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
 
-    l3a = Conv2DLayer(l2d, num_filters=20, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l3a = Conv2DLayer(l2d, num_filters=40, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l3b = BatchNormLayer(l3a)
     l3c = nn.layers.NonlinearityLayer(l3b)
     l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 4))
