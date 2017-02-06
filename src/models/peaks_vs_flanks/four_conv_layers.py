@@ -41,27 +41,29 @@ MaxPool2DLayer = nn.layers.MaxPool2DLayer
 
 BatchNormLayer = nn.layers.BatchNormLayer
 
+### TODO: Try to evade pooling for a few rounds, doing so only at the end, and try not using so many units in dense layer to cut down on params.
+### at least until data set gets larger.
 def build_model():
 
     l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
-    l1a = Conv2DLayer(l0, num_filters=100, filter_size=(1, 5), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l1a = Conv2DLayer(l0, num_filters=200, filter_size=(1, 3), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
-    l1c = nn.layers.NonlinearityLayer(l1b)
+    l1c = nn.layers.NonlinearityLayer(l1b,nonlinearity=nn.nonlinearities.leaky_rectify)
 
-    l2a = Conv2DLayer(l1c, num_filters=100, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l2a = Conv2DLayer(l1c, num_filters=100, filter_size=(1, 6), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
-    l2c = nn.layers.NonlinearityLayer(l2b)
-    l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
+    l2c = nn.layers.NonlinearityLayer(l2b,nonlinearity=nn.nonlinearities.leaky_rectify)
+    l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 2))
 
-    l3a = Conv2DLayer(l2d, num_filters=100, filter_size=(1, 30), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l3a = Conv2DLayer(l2d, num_filters=100, filter_size=(1, 9), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l3b = BatchNormLayer(l3a)
-    l3c = nn.layers.NonlinearityLayer(l3b)
-    l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 4))
+    l3c = nn.layers.NonlinearityLayer(l3b,nonlinearity=nn.nonlinearities.leaky_rectify)
+    l3d = MaxPool2DLayer(l3c, pool_size=(1, 4), stride=(1, 2))
     
-    l4a = Conv2DLayer(l3d, num_filters=100, filter_size=(1, 40), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l4a = Conv2DLayer(l3d, num_filters=50, filter_size=(1, 12), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l4b = BatchNormLayer(l4a)
-    l4c = nn.layers.NonlinearityLayer(l4b)
-    l4d = MaxPool2DLayer(l4c, pool_size=(1, 8), stride=(1, 8))
+    l4c = nn.layers.NonlinearityLayer(l4b,nonlinearity=nn.nonlinearities.leaky_rectify)
+    l4d = MaxPool2DLayer(l4c, pool_size=(1, 4), stride=(1, 2))
     
     ### output dims of l3d should be (n_batches, 100, 10)
     #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,2000)) ## produces the same output shape, and without the need to specify the shape.

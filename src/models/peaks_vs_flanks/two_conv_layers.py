@@ -58,7 +58,7 @@ def build_model():
     ### output dims of l3d should be (n_batches, 100, 10)
     #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,2000)) ## produces the same output shape, and without the need to specify the shape.
     l3a = nn.layers.FlattenLayer(l2d)
-    l3b = nn.layers.DenseLayer(l3a, 1000)
+    l3b = nn.layers.DenseLayer(l3a, 200)
     l3c = BatchNormLayer(l3b)
     l3d = nn.layers.DropoutLayer(l3c, p=0.5)
 
