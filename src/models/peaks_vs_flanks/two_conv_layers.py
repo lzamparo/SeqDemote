@@ -31,36 +31,53 @@ learning_rate_schedule = {
     700: 0.0003,
     800: 0.00003,
 }
-validate_every = 1
+
+# hyper-parameter range dictionary for training with spearmint
+model_params_dict = {'l1filters': {'type': 'int', 'min': 50, 'max': 300},
+               'l1filter_size': {'type': 'int', 'min': 5, 'max': 30}, 
+               'l1pool_size': {'type': 'int', 'min': 3, 'max': 5}, 
+               'l1stride': {'type': 'int', 'min': 3, 'max': 5},
+               'l2filters': {'type': 'int', 'min': 50, 'max': 200},
+               'l2filter_size': {'type': 'int', 'min': 10, 'max': 30}, 
+               'l2pool_size': {'type': 'int', 'min': 3, 'max': 5}, 
+               'l2stride': {'type': 'int', 'min': 3, 'max': 5},
+               'l3dense_size': {'type': 'int', 'min': 100, 'max': 300}, 
+               'l3dropout': {'type': 'float', 'min': 0.1, 'max': 0.6}}
+
+
+validate_every = 3
 save_every = 5
 data_loader = load.HematopoeticDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
-
 
 # Refs to lasagne conv layers
 Conv2DLayer = nn.layers.Conv2DLayer
 MaxPool2DLayer = nn.layers.MaxPool2DLayer
-
 BatchNormLayer = nn.layers.BatchNormLayer
 
-def build_model():
+def build_model(params_dict=None):
+    ''' Construct the network from the params dict (or the established default dict below if none is provided)'''
+    if not params_dict:
+        params_dict = {'l1filters': 100, 'l1filter_size': 10, 'l1pool_size': 3, 'l1stride': 3,
+                       'l2filters': 50, 'l2filter_size': 20, 'l2pool_size': 4, 'l2stride': 4,
+                       'l3dense_size': 200, 'l3dropout': 0.5}
 
     l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
-    l1a = Conv2DLayer(l0, num_filters=100, filter_size=(1, 10), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l1a = Conv2DLayer(l0, num_filters=params_dict['l1filters'], filter_size=(1, params_dict['l1filter_size']), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
     l1c = nn.layers.NonlinearityLayer(l1b)
-    l1d = MaxPool2DLayer(l1c, pool_size=(1, 3), stride=(1, 3))
+    l1d = MaxPool2DLayer(l1c, pool_size=(1, params_dict['l1pool_size']), stride=(1, params_dict['l1stride']))
 
-    l2a = Conv2DLayer(l1d, num_filters=50, filter_size=(1, 20), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l2a = Conv2DLayer(l1d, num_filters=params_dict['l2filters'], filter_size=(1, params_dict['l2filter_size']), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
     l2c = nn.layers.NonlinearityLayer(l2b)
-    l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
+    l2d = MaxPool2DLayer(l2c, pool_size=(1, params_dict['l2pool_size']), stride=(1, params_dict['l2stride']))
     
     ### output dims of l3d should be (n_batches, 100, 10)
     #l4a = nn.layers.ReshapeLayer(l3d, shape=(batch_size,2000)) ## produces the same output shape, and without the need to specify the shape.
     l3a = nn.layers.FlattenLayer(l2d)
-    l3b = nn.layers.DenseLayer(l3a, 200)
+    l3b = nn.layers.DenseLayer(l3a, params_dict['l3dense_size'])
     l3c = BatchNormLayer(l3b)
-    l3d = nn.layers.DropoutLayer(l3c, p=0.5)
+    l3d = nn.layers.DropoutLayer(l3c, p=params_dict['l3dropout'])
 
     l4 = nn.layers.DenseLayer(l3d, num_units=1, nonlinearity=nn.nonlinearities.sigmoid)
 
