@@ -112,6 +112,7 @@ def objective(params_dict, model_module):
     losses_valid_auc = []
     losses_valid_aupr = []
     losses_train = []
+    losses_valid_log = []
 
     model_module.data_loader.load_train()
 
