@@ -111,6 +111,7 @@ def objective(params_dict, model_module):
     chunks_train_idcs = range(model_module.num_chunks_train)
     losses_valid_auc = []
     losses_valid_aupr = []
+    losses_train = []
 
     model_module.data_loader.load_train()
 
