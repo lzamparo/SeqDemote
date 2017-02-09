@@ -31,8 +31,17 @@ learning_rate_schedule = {
     700: 0.0003,
     800: 0.00003,
 }
-validate_every = 1
-save_every = 5
+model_params_dict = {'l1filters': {'type': 'int', 'min': 50, 'max': 300},
+                     'l1filter_size': {'type': 'int', 'min': 3, 'max': 30}, 
+               'l1pool_size': {'type': 'int', 'min': 3, 'max': 5}, 
+               'l1stride': {'type': 'int', 'min': 2, 'max': 4},
+               'l2dense_size': {'type': 'int', 'min': 50, 'max': 100}, 
+               'l2dropout': {'type': 'float', 'min': 0.1, 'max': 0.6}}
+
+num_epochs = 8
+validate_every = 2
+save_every = 2
+
 data_loader = load.HematopoeticDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
 
 
@@ -41,27 +50,26 @@ Conv2DLayer = nn.layers.Conv2DLayer
 MaxPool2DLayer = nn.layers.MaxPool2DLayer
 BatchNormLayer = nn.layers.BatchNormLayer
 
-def build_model():
-
+def build_model(params_dict=None):
+    ''' Construct the network from the params dict (or the established default dict below if none is provided) '''
+    if not params_dict:
+        params_dict = {'l1filters': 100, 'l1filter_size': 10, 'l1pool_size': 4, 'l1stride': 2,
+                       'l2dense_size': 200, 'l2dropout': 0.5}   
+        
     l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
-    l1a = Conv2DLayer(l0, num_filters=100, filter_size=(1, 10), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
+    l1a = Conv2DLayer(l0, num_filters=params_dict['l1filters'], filter_size=(1, params_dict['l1filter_size']), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
-    l1c = nn.layers.NonlinearityLayer(l1b)
-    l1d = MaxPool2DLayer(l1c, pool_size=(1, 4), stride=(1, 4))
-
-    #l2a = Conv2DLayer(l1d, num_filters=80, filter_size=(1, 15), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
-    #l2b = BatchNormLayer(l2a)
-    #l2c = nn.layers.NonlinearityLayer(l2b)
-    #l2d = MaxPool2DLayer(l2c, pool_size=(1, 4), stride=(1, 4))
+    l1c = nn.layers.NonlinearityLayer(l1b,nonlinearity=nn.nonlinearities.leaky_rectify)
+    l1d = MaxPool2DLayer(l1c, pool_size=(1, params_dict['l1pool_size']), stride=(1, params_dict['l1stride']))
     
-    l3a = nn.layers.FlattenLayer(l1d)
-    l3b = nn.layers.DenseLayer(l3a, l3a.output_shape[1])
-    l3c = BatchNormLayer(l3b)
-    l3d = nn.layers.DropoutLayer(l3c, p=0.3)
+    l2a = nn.layers.FlattenLayer(l1d)
+    l2b = nn.layers.DenseLayer(l2a, params_dict['l2dense_size'])
+    l2c = BatchNormLayer(l2b)
+    l2d = nn.layers.DropoutLayer(l2c, p=params_dict['l2dropout'])
     
-    l4 = nn.layers.DenseLayer(l3d, num_units=1, nonlinearity=nn.nonlinearities.sigmoid)
+    l3 = nn.layers.DenseLayer(l2d, num_units=1, nonlinearity=nn.nonlinearities.sigmoid)
 
-    return l0, l4
+    return l0, l3
 
 
 def build_objective(l_ins, l_out, targets, training_mode=True):

@@ -44,9 +44,9 @@ model_params_dict = {'l1filters': {'type': 'int', 'min': 50, 'max': 300},
                'l3dense_size': {'type': 'int', 'min': 100, 'max': 300}, 
                'l3dropout': {'type': 'float', 'min': 0.1, 'max': 0.6}}
 
-
-validate_every = 3
-save_every = 5
+num_epochs = 8
+validate_every = 2
+save_every = 2
 data_loader = load.HematopoeticDataLoader(chunk_size=chunk_size, batch_size=batch_size, num_chunks_train=num_chunks_train) 
 
 # Refs to lasagne conv layers
@@ -64,12 +64,12 @@ def build_model(params_dict=None):
     l0 = nn.layers.InputLayer((batch_size, data_rows, 1, data_cols))  ## TODO: first dim maybe be chunk_size
     l1a = Conv2DLayer(l0, num_filters=params_dict['l1filters'], filter_size=(1, params_dict['l1filter_size']), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l1b = BatchNormLayer(l1a)
-    l1c = nn.layers.NonlinearityLayer(l1b)
+    l1c = nn.layers.NonlinearityLayer(l1b,nonlinearity=nn.nonlinearities.leaky_rectify)
     l1d = MaxPool2DLayer(l1c, pool_size=(1, params_dict['l1pool_size']), stride=(1, params_dict['l1stride']))
 
     l2a = Conv2DLayer(l1d, num_filters=params_dict['l2filters'], filter_size=(1, params_dict['l2filter_size']), W=nn.init.Orthogonal(gain='relu'), b=nn.init.Constant(0.1), nonlinearity=None, untie_biases=True)
     l2b = BatchNormLayer(l2a)
-    l2c = nn.layers.NonlinearityLayer(l2b)
+    l2c = nn.layers.NonlinearityLayer(l2b,nonlinearity=nn.nonlinearities.leaky_rectify)
     l2d = MaxPool2DLayer(l2c, pool_size=(1, params_dict['l2pool_size']), stride=(1, params_dict['l2stride']))
     
     ### output dims of l3d should be (n_batches, 100, 10)
