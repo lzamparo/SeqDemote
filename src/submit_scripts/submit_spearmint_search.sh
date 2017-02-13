@@ -3,7 +3,7 @@
 #  utilizing 1 GPUs, with one thread
 #
 # walltime : maximum wall clock time (hh:mm:ss)
-#PBS -l walltime=24:00:00
+#PBS -l walltime=48:00:00
 #
 # join stdout and stderr
 #PBS -j oe
@@ -26,7 +26,7 @@
 #PBS -V
 #
 # job name (default = name of script file)
-#PBS -N seqdeep_full_training
+#PBS -N spearmint_hyperparam_search
 #
 # mail settings (one or more characters)
 # email is sent to local user, unless another email address is specified with PBS -M option 
@@ -60,4 +60,4 @@ echo `nvidia-smi -q -d COMPUTE`
 export THEANO_FLAGS="device=$my_device" 
 
 cd ~/projects/SeqDemote/src
-python train_convnet.py $MODEL
+python train_by_spearmint.py $MODEL
