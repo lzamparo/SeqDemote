@@ -26,7 +26,6 @@ SeqGL_mean = np.asarray(SeqGL_comparisons).mean()
 
 df_auc = df[df['measure'] == 'validation AUC']
 
-# TODO: add in a point to represent the one SeqGL_mean point
 validation_auc = gg.ggplot(df_auc, gg.aes(x='epoch', y='score', color='model')) + \
     gg.geom_line(size=2.0) + \
     gg.xlab('Epoch') + \
