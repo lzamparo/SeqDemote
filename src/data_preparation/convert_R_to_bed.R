@@ -18,7 +18,7 @@ require(dplyr)
 # chr1:161067622-161068222(+)	1	1	1	1	1	1
 # chr4:84376575-84377175(+)	1	1	1	1	1	1
 
-setwd('/Users/zamparol/projects/SeqDemote/results/SeqGL')
+setwd(path.expand('~/projects/SeqDemote/results/SeqGL'))
 top_dir <- getwd()
 cell_order <- data.frame(names=c("H1hesc","CD34","CD14","CD56","CD3","CD19"),position=c(1,2,3,4,5,6))
 
