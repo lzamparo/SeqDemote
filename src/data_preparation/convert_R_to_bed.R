@@ -1,5 +1,6 @@
 ### Extract data as bed file (one each for peaks, flanks), and activity table (also one for peaks, flanks)
 require(Biostrings)
+require(GenomicRanges)
 require(dplyr)
 
 # bed file example
