@@ -42,7 +42,7 @@ print("Experiment ID: ", expid)
 
 print("...get the relevant model paremeter search space, set up spearmint")
 model_params_dict = model_module.model_params_dict
-ss = simple_spearmint.SimpleSpearmint(model_params_dict, maximize=True)
+ss = simple_spearmint.SimpleSpearmint(model_params_dict, minimize=False)
 
 # Define an objective function, must return a scalar value
 def objective(params_dict, model_module):
