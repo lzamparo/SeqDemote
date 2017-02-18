@@ -50,7 +50,7 @@ rdata_to_text <- function(directory, position) {
   # make the bed file, activation file for training, test peaks
   training_peaks_bed <- all_training_data[train_peak_rows,]
   write.table(training_peaks_bed, file = paste0(directory, "_training_peaks.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
-  trainig_peaks_activation_table <- training_peaks_bed %>% mutate(peakID = paste0(seqnames,":",starts,"-",ends,"(+)"), H1hesc = 0, CD34 = 0, CD14 = 0, CD56 = 0, CD3 = 0, CD19 = 0) %>% select(peakID, H1hesc, CD34,CD14,CD56,CD3,CD19) 
+  training_peaks_activation_table <- training_peaks_bed %>% mutate(peakID = paste0(seqnames,":",starts,"-",ends,"(+)"), H1hesc = 0, CD34 = 0, CD14 = 0, CD56 = 0, CD3 = 0, CD19 = 0) %>% select(peakID, H1hesc, CD34,CD14,CD56,CD3,CD19) 
   training_peaks_activation_table[,position + 1] = 1   # +1 is for the offset due to peakID
   write.table(training_peaks_activation_table, file = paste0(directory, "_training_peaks_act.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
   
