@@ -48,7 +48,7 @@ rdata_to_text <- function(directory, position) {
                                   strands=strand(train.test.data$test.regions))
   
   # make the bed file, activation file for training, test peaks
-  training_peaks_bed <- all_training_data[training_peak_rows,]
+  training_peaks_bed <- all_training_data[train_peak_rows,]
   write.table(training_peaks_bed, file = paste0(directory, "_training_peaks.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
   trainig_peaks_activation_table <- training_peaks_bed %>% mutate(peakID = paste0(seqnames,":",starts,"-",ends,"(+)"), H1hesc = 0, CD34 = 0, CD14 = 0, CD56 = 0, CD3 = 0, CD19 = 0) %>% select(peakID, H1hesc, CD34,CD14,CD56,CD3,CD19) 
   training_peaks_activation_table[,position + 1] = 1   # +1 is for the offset due to peakID
@@ -61,7 +61,7 @@ rdata_to_text <- function(directory, position) {
   write.table(test_peaks_activation_table, file = paste0(directory, "_test_peaks_act.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
   
   # make the bed file, activation file for training, test flanks
-  training_flanks_bed <- all_training_data[training_flank_rows,]
+  training_flanks_bed <- all_training_data[train_flank_rows,]
   write.table(training_flanks_bed, file = paste0(directory, "_training_flanks.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
   training_flanks_activation_table <- training_flanks_bed %>% mutate(flankID = paste0(seqnames,":",starts,"-",ends,"(+)"), H1hesc = 0, CD34 = 0, CD14 = 0, CD56 = 0, CD3 = 0, CD19 = 0) %>% select(flankID, H1hesc, CD34,CD14,CD56,CD3,CD19) 
   write.table(training_flanks_activation_table, file = paste0(directory, "_training_flanks_act.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
