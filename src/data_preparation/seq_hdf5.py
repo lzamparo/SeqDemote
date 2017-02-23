@@ -36,6 +36,7 @@ def encode_sequences(my_args=None):
     parser.add_option('-t', dest='test_pct', default=0, type='float', help='Test % [Default: %default]')
     parser.add_option('-k', dest='kmerize', default=1, type='int', help='produce kmer-ized representation of the input for this value of k')
     parser.add_option('-v', dest='valid_pct', default=0, type='float', help='Validation % [Default: %default]')
+    parser.add_option('-l', dest='columns', default=600, type='int', help='number of bases (i.e feature columns) in the input')
     parser.add_option('-u', dest='chunks', default=10, type='int', help='Process the fasta file in this many chunks to conserve RAM')
     parser.add_option('-g', dest='group', default='/', type='str', help='All data (both encoded sequences and activation labels) are stored underneath this group.  Will be created if it does not arleady exist.')
     if not my_args:
@@ -78,10 +79,10 @@ def encode_sequences(my_args=None):
     label_group = group.create_group('labels')    
     
     alphabet_size = 4
-    feature_cols = 600
+    feature_cols = options.columns
     if options.kmerize > 1:
         alphabet_size = int(pow(4, options.kmerize))
-        feature_cols = 600 - options.kmerize + 1
+        feature_cols = options.columns - options.kmerize + 1
     
     if train_count > 0:
         train_in_dset = data_group.create_dataset('train_in', shape=(0, alphabet_size, 1, feature_cols),  maxshape=(None, alphabet_size, 1, feature_cols), dtype='uint8')
