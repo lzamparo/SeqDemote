@@ -2,6 +2,7 @@ Data directory for storing fixed data sets
 
 Subdirectories are
 
+-- ATAC: ATAC-seq data on hematopoeitc stem and mature cells (Corces et al)
 -- DNase: encode and roadmap data (from Basset)
 -- invitro: CSI data from Ansari lab
 -- models: configuration files for best convnet from Basset

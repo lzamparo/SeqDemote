@@ -10,3 +10,5 @@ Results directory for tracking computational experiments peformed on data
 - kmer_models: will eventually contain the kmer model tasks
 | 
 - basset_models: contains the results for the original basset models on the original basset dataset
+|
+- spearmint_runs: contains the txt output from model search using Spearmint
