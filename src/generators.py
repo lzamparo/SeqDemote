@@ -13,9 +13,9 @@ default_augmentation_params = {
 }
 
 kmer_augmentation_params = {
-    'kmerize': 4,
+    'kmerize': 3,
     'subsequence_range': (-300, 300),
-    'subsequence_length': 0,
+    'subsequence_length': 200,
     'do_subsequences': False,
 }
 
