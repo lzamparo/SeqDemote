@@ -43,12 +43,11 @@ for key in donor_cell_type_rep_number.keys():
 def encode_prefix(filename, celltype, rep_number=None):
     ''' take a fastq file encoded by its SRR id, re-encode it as 
     <donor id>_rep?_<original suffix>'''
-    pdb.set_trace()
     srr_id, suffix = filename.split("_")
     donor = srr_to_donor_id[srr_id]
     if not rep_number:
         rep_number = donor_cell_type_rep_number[(donor, celltype)].pop()
-    new_name = celltype + ".rep" + str(rep_number) + "." + str(donor) + suffix 
+    new_name = celltype + ".rep" + str(rep_number) + "." + str(donor) + "_" + suffix 
     return new_name, rep_number
 
 # walk directories of data, renaming files as needed
@@ -60,7 +59,5 @@ for dirname, dirs, files in os.walk('/cbio/cllab/nobackup/zamparol/heme_ATAC/dat
         rep_number = None
         for f in fastq_files:
             renamed_file, rep_number = encode_prefix(f, celltype, rep_number)
-        pdb.set_trace()
+            print(f, ' gets renamed to ', renamed_file)
         rep_number = None
-        print(dirname, " : ", ",".join(fastq_files))
-        print(dirname, " : ", ",".join(renamed_files))
