@@ -47,7 +47,7 @@ def encode_prefix(filename, celltype, rep_number=None):
     donor = srr_to_donor_id[srr_id]
     if not rep_number:
         rep_number = donor_cell_type_rep_number[(donor, celltype)].pop()
-    new_name = celltype + ".rep" + str(rep_number) + "." + str(donor) + "_" + suffix 
+    new_name = celltype + "." + str(donor) + "-rep" + str(rep_number) + "_" + suffix 
     return new_name, rep_number
 
 # walk directories of data, renaming files as needed
