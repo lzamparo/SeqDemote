@@ -60,8 +60,7 @@ for dirname, dirs, files in os.walk('/cbio/cllab/nobackup/zamparol/heme_ATAC/dat
         for f in fastq_files:
             renamed_file, rep_number = encode_prefix(f, celltype, rep_number)
             try:
-                #os.rename(os.path.join(dirname,f), os.path.join(prefix,renamed_file))
-                print("move and rename ", os.path.join(dirname,f), " to ", os.path.join(prefix,renamed_file))
+                os.rename(os.path.join(dirname,f), os.path.join(prefix,renamed_file))
             except:
                 print("cannot rename and move ", f, " to ", os.path.join(prefix,renamed_file))
         rep_number = None
