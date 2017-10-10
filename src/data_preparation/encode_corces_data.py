@@ -39,17 +39,9 @@ for key in activity_dict.keys():
     val = activity_dict[key]
     code_to_str[val] = key
 
+def calculate_activation(chrom,start,end):
+    """ This is a big one.  For a given genomic locus, calculate the 50bp average coverage """
 
-
-def parse_access_pattern(pattern):
-    ''' The access pattern in Alvaro's data is a dash delimited string indicating in which cell-types this particular peak is accessible.
-    I need to return this as an int8 nparray
-    e.g if pattern is H1hesc-CD34-CD14-CD56-CD3-CD19, output is np.asarray([1,1,1,1,1,1])
-        if pattern is CD34-CD14, output is np.asarray([0,1,1,0,0,0])
-    
-    '''
-    arrays = tuple([pattern_dict[d] for d in pattern.split('-')])
-    return np.sum(np.vstack(arrays), axis=0)
 
 def peak_to_activation(peak):
     ''' translate a bedfile peak into a fasta identifier for the peak, and an activation list '''
@@ -58,8 +50,8 @@ def peak_to_activation(peak):
     chrom = parts[0]
     start = parts[1]
     end = parts[2]
-    strand = parts[5]
-    activations = parts[6]
+    strand = '+'
+    
     
     active_in_peaks_str = [code_to_str[p] for p in activations.split(',')]
     active_in_peaks_array = parse_access_pattern('-'.join(active_in_peaks_str))
