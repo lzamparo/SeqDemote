@@ -5,6 +5,7 @@ import numpy as np
 from subprocess import call, check_output
 from process_flanks import make_flanks
 from seq_hdf5 import encode_sequences
+import pybedtools
 
 
 ### Grab all cells within the hematopoetic lineage out of the Roadmap data used for Alvaro's paper
@@ -12,7 +13,7 @@ from seq_hdf5 import encode_sequences
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
 
 ### Read atlas .bed file
-atlas = pandas.read_csv("all_celltypes_peak_atlas.bed", sep="\t", header=None, index_col=None, names=["chr", "start", "end"])
+atlas = pandas.read_csv("all_celltypes_peak_atlas_unique.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end", "length"])
 celltypes = [l for l in os.listdir('./peaks')]
 
 
@@ -40,7 +41,7 @@ for key in activity_dict.keys():
     code_to_str[val] = key
 
 def calculate_activation(chrom,start,end):
-    """ This is a big one.  For a given genomic locus, calculate the 50bp average coverage """
+    """ This is a big one.  For a given genomic locus, calculate the 60bp average coverage """
 
 
 def peak_to_activation(peak):
@@ -61,19 +62,12 @@ def peak_to_activation(peak):
     act_line = '\t'.join(out_list)    
     return act_line
 
-### Convert Alvaro's data set into a bedfile format expected by preprocess_features.py
-if not os.path.exists('hematopoetic_peaks.bed'):
-    outfile = open('hematopoetic_peaks.bed','w')    
-    for index, line in peaks.iterrows():
-        print(alvaro_to_bed_format(line), file=outfile)
-    
-    outfile.close()    
-
+ 
 
 ### Use bedtools to extract fasta formatted sequences based on the bedtools format
-if not os.path.exists('hematopoetic_peaks.fa'):
+if not os.path.exists('corces_hematopoetic_peaks.fa'):
     try:
-        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed hematopoetic_peaks.bed -s -fo hematopoetic_peaks.fa", shell=True)
+        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed all_celltypes_peak_atlas_unique.bed -s -fo corces_hematopoetic_peaks.fa", shell=True)
         if retcode < 0:
             print("Child was terminated by signal", -retcode, file=sys.stderr)
         else:
@@ -83,16 +77,16 @@ if not os.path.exists('hematopoetic_peaks.fa'):
 
 
 ### Make a matched (or near matched) set of flanks for the peaks in hematopoetic_peaks.bed
-if not os.path.exists('hematopoetic_flanks.bed'):
-    arg_string = "-o hematopoetic_flanks hematopoetic_peaks.bed"
+if not os.path.exists('corces_hematopoetic_flanks.bed'):
+    arg_string = "-o corces_hematopoetic_flanks all_celltypes_peak_atlas_unique.bed"
     my_args = arg_string.split(sep=' ')
     make_flanks(my_args)
 
 
 ### Use bedtools again to get the fasta formatted sequences for the flanks
-if not os.path.exists('hematopoetic_flanks.fa'):
+if not os.path.exists('corces_hematopoetic_flanks.fa'):
     try:
-        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed hematopoetic_flanks.bed -s -fo hematopoetic_flanks.fa", shell=True)
+        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed corces_hematopoetic_flanks.bed -s -fo corces_hematopoetic_flanks.fa", shell=True)
         if retcode < 0:
             print("Child was terminated by signal", -retcode, file=sys.stderr)
         else:
@@ -100,8 +94,12 @@ if not os.path.exists('hematopoetic_flanks.fa'):
     except OSError as e:
         print("Execution failed:", e, file=sys.stderr)
 
-### Make the activity table for the peaks by parsing Alvaro's file again
 
+##### Here's where things get more complicated.  For a given subpeak, I need to find the 
+##### average activation over all celltypes for which I have data.  It's not critical until
+##### I need to start learning the embedding, but I do have to 
+
+### Make the activity table for the peaks by parsing Alvaro's file again
 if not os.path.exists('hematopoetic_peaks_act.txt'):
     header = "\t".join(["peakID","H1hesc","CD34","CD14","CD56","CD3","CD19"])
     outfile = open('hematopoetic_peaks_act.txt','w')
@@ -112,28 +110,6 @@ if not os.path.exists('hematopoetic_peaks_act.txt'):
             act_line = peak_to_activation(line)
             print(act_line, file=outfile)
 
-
-### Test the activation file:  
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w H1hesc
-#62002
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD34
-#54766
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD14
-#48303
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD56
-#36120
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD3
-#35188
-#mski1743:DNase zamparol$ cat peaksTable.txt | grep -c -w CD19
-#37218
-
-hema_acts = pandas.read_csv("hematopoetic_peaks_act.txt", sep="\t")
-assert(sum(hema_acts['H1hesc']) == 62002) # checks out
-#assert(sum(hema_acts['CD34']) == 54766) # short 4 ??
-assert(sum(hema_acts['CD14']) == 48303) # checks out
-assert(sum(hema_acts['CD56']) == 36120) # checks out
-assert(sum(hema_acts['CD3']) == 35188)  # checks out
-assert(sum(hema_acts['CD19']) == 37218) # checks out
         
 ### Make the activity table for the flanks
 if not os.path.exists('hematopoetic_flanks_act.txt'):

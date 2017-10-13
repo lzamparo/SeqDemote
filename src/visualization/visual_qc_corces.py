@@ -13,7 +13,7 @@ import ggplot as gg
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
 
 ### Read atlas .bed file
-atlas = pandas.read_csv("all_celltypes_peak_atlas.bed", sep="\t", header=None, index_col=None, names=["chr", "start", "end"])
+atlas = pandas.read_csv("all_celltypes_peak_atlas_unique.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end", "length"])
 celltypes = [l for l in os.listdir('./peaks')]
 
 def get_reps_filenames(celltype):
@@ -23,8 +23,11 @@ def get_reps_filenames(celltype):
 
 
 ### Take a look at the length distribution for peaks:
-atlas['length'] = atlas['end'] - atlas['start']
-peak_lengths = gg.ggplot(atlas, gg.aes(x='length')) + geom_histogram(binwidth = 50)
+#peak_lengths = gg.ggplot(atlas, gg.aes(x='length')) + \
+    #gg.geom_histogram(binwidth = 200) + \
+    #gg.xlab('Peak lengths (bp)') + \
+    #gg.ggtitle("Peak lenghts histogram over the atlas")
+#peak_lengths.save(os.path.join("~/projects/SeqDemote/results/diagnostic_plots/ATAC/","atlas_length_histogram"), width = 10)
 
 
 ### First test: for a randomly selected peak, get the coverage estimates for all celltypes and all replicates
