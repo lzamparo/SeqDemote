@@ -97,7 +97,7 @@ if not os.path.exists('corces_hematopoetic_flanks.fa'):
 
 ##### Here's where things get more complicated.  For a given subpeak, I need to find the 
 ##### average activation over all celltypes for which I have data.  It's not critical until
-##### I need to start learning the embedding, but I do have to 
+##### I need to start learning the embedding, but I do have to deal with it eventually.
 
 ### Make the activity table for the peaks by parsing Alvaro's file again
 if not os.path.exists('hematopoetic_peaks_act.txt'):
