@@ -7,15 +7,6 @@ from process_flanks import make_flanks
 from seq_hdf5 import encode_sequences
 import pybedtools
 
-
-### Grab all cells within the hematopoetic lineage out of the Roadmap data used for Alvaro's paper
-
-os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
-
-### Read atlas .bed file
-atlas = pandas.read_csv("peaks/all_celltypes_peak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
-celltypes = [l for l in os.listdir('./peaks') if not l.endswith('.bed')]
-atlas['peak_len'] = atlas['end'] - atlas['start']
       
 ### utility functions, maybe refactor them out later?
 def extend_peak(start,end, length=60):
@@ -30,11 +21,9 @@ def extend_peak(start,end, length=60):
     return new_start, new_end
     
 
-def peak_to_subpeak_list(peak):
+def peak_to_subpeak_list(chrom,start,end):
     """ Take the given peak, split into a list of subregions that make 
     up the peak """
-    peak = peak.strip()
-    chrom, start, end = peak.split('\t')
     num_subpeaks = int(end) - int(start) // 60
     start_list = list(range(start,end,60))
     end_list = start_list[1:] 
@@ -42,19 +31,36 @@ def peak_to_subpeak_list(peak):
     subpeak_lists = [(chrom,s,e) for s,e in zip(start_list,end_list)]
     return subpeak_lists
 
-def extract_activation(celltype, chrom, start, end):
+def extract_mean_activation(celltype, chrom, start, end):
     """ This is a big one.  For a given genomic locus, calculate the 60bp 
     average coverage for this celltype"""
     # get files in peaks/celltype
+    my_peak = '\t'.join([chrom,start,end])
+    bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
+    
+    my_bg_filenames = get_reps_filenames(celltype)
+    my_regions = [bedtool_peak.intersect(pybedtools.BedTool(b), sorted=True) for b in my_bg_filenames]
+    
+    # map the counts that underlie each intersection, take the average across replicates
+    my_counts = [r.map(pybedtools.BedTool(b), c=4, o='mean') for b in my_bg_filenames for r in my_regions]
+    
+    # marshall counts, regions, cell type data into a df
+    my_counts_dfs = [c.to_dataframe() for c in my_counts]    
     # get coverage over all regions for all celltypes
     # take the average coverage & return
-    pass
+    return my_counts_dfs
 
  
-def extract_sequence(chrom,start,end):
-    """ Extract the sequence of this (sub) peak """
+def extract_sequence(chrom,start,end,fasta_file):
+    """ Extract the sequence of this (sub) peak 
+    default should be: os.path.expanduser("~/projects/data/DNase/genomes/hg19.fa") """
     # extract the sequence from this region with pybedtools
-    pass
+    my_peak = '\t'.join([chrom,start,end])
+    bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
+    fasta = pybedtools.example_filename(fasta_file)
+    a = a.sequence(fi=fasta)
+    #print(open(a.seqfn).read())    
+    
 
 
 def peak_to_activation(peak):
@@ -77,14 +83,33 @@ def peak_to_activation(peak):
     return act_line
 
 
+### Grab all cells within the hematopoetic lineage out of the FastATAC
+### data used from Ryan Corces' paper
+
+os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
+hg19_fasta = os.path.expanduser('~/projects/SeqDemote/data/DNase/genomes/hg19.fa')
+
+### Read atlas .bed file
+atlas = pandas.read_csv("peaks/all_celltypes_peak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
+celltypes = [l for l in os.listdir('./peaks') if not l.endswith('.bed')]
+atlas['peak_len'] = atlas['end'] - atlas['start']
 
 
-
-
- 
-
-### Use bedtools to extract fasta formatted sequences based on the bedtools format
-if not os.path.exists('corces_hematopoetic_peaks.fa'):
+### Use pybedtools to extract sequences and activations, formatted as FASTA
+if not os.path.exists('fasta_peak_files/'):
+    maxsubs = 100000
+    for i,peak in atlas.iterrows():
+        chrom, start, end = peak['chr'], peak['start'], peak['end']
+        for subpeak in peak_to_subpeak_list(chrom,start,end):
+            sub_chrom, sub_start, sub_end = subpeak
+            celltype_activations = [extract_mean_activation(ct, sub_chrom, sub_start, sub_end) for ct in celltypes]
+            sequences = [extract_sequence(sub_chrom, sub_start, sub_end, hg19_fasta)]
+            
+            # write to file
+    
+    
+    
+    
     try:
         retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed all_celltypes_peak_atlas_unique.bed -s -fo corces_hematopoetic_peaks.fa", shell=True)
         if retcode < 0:

@@ -25,18 +25,13 @@ def get_reps_filenames(celltype):
 
 
 ### Take a look at the length distribution for peaks:
-#limits = (0,1500)
-#major_breaks = breaks.mpl_breaks()(limits)
-# minor_breaks=breaks.minor_breaks()(major_breaks,limits)
-#labels = [str(l) for l in major_breaks]
-# gg.scales.scale_x_discrete(breaks = major_breaks, labels = labels, limits=limits) +\
+limits = (0,1500)
 
 peak_lengths = gg.ggplot(atlas, gg.aes(x='peak_len')) + \
     gg.geoms.geom_histogram(binwidth = 25) + \
-    gg.xlim(0,1500) + \
-    gg.labels.xlab('Peak lengths (bp)') + \
+    gg.scales.scale_x_continuous(breaks = breaks.extended_breaks(n=15), limits=limits) + \
     gg.labels.ggtitle("Peak lenghts histogram over the atlas") + \
-    gg.themes.theme_seaborn()
+    gg.labels.xlab('Peak lengths (bp)')
     
 peak_lengths.save(os.path.join(os.path.expanduser("~/projects/SeqDemote/results/diagnostic_plots/ATAC/"),"rebuilt_atlas_length_histogram.pdf"), width = 10)
 
