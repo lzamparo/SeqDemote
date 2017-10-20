@@ -19,6 +19,14 @@ def extend_peak(start,end, length=60):
     new_end = end +  np.sign(discrepancy) *(adjustment + offset)
     assert(new_end - new_start == length)
     return new_start, new_end
+
+
+def get_reps_filenames(celltype):
+    """ Return the sorted bedgraph files for eahc replicate of the given celltype """ 
+    prefix = os.path.join(os.getcwd(),'peaks',celltype,'MACS2')
+    reps = os.listdir(prefix)
+    return [os.path.join(prefix,rep) for rep in reps if rep.endswith('sorted.bdg')]
+
     
 
 def peak_to_subpeak_list(chrom,start,end):
@@ -32,23 +40,21 @@ def peak_to_subpeak_list(chrom,start,end):
     return subpeak_lists
 
 def extract_mean_activation(celltype, chrom, start, end):
-    """ This is a big one.  For a given genomic locus, calculate the 60bp 
-    average coverage for this celltype"""
-    # get files in peaks/celltype
-    my_peak = '\t'.join([chrom,start,end])
-    bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
+    """ For a given genomic locus, calculate the 60bp 
+    average coverage for this celltype 
+    *** N.B:  need to normalize for library size, not yet done IIRC *** 
+    """
     
+    my_peak = '\t'.join([chrom,str(start),str(end)])
+    bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
     my_bg_filenames = get_reps_filenames(celltype)
-    my_regions = [bedtool_peak.intersect(pybedtools.BedTool(b), sorted=True) for b in my_bg_filenames]
     
     # map the counts that underlie each intersection, take the average across replicates
-    my_counts = [r.map(pybedtools.BedTool(b), c=4, o='mean') for b in my_bg_filenames for r in my_regions]
+    my_counts = [bedtool_peak.map(pybedtools.BedTool(b), c=4, o='mean') for b in my_bg_filenames]
     
     # marshall counts, regions, cell type data into a df
-    my_counts_dfs = [c.to_dataframe() for c in my_counts]    
-    # get coverage over all regions for all celltypes
-    # take the average coverage & return
-    return my_counts_dfs
+    counts_df = pandas.concat([c.to_dataframe() for c in my_counts])    
+    return counts_dfs["name"].mean()
 
  
 def extract_sequence(chrom,start,end,fasta_file):
@@ -61,27 +67,37 @@ def extract_sequence(chrom,start,end,fasta_file):
     a = a.sequence(fi=fasta)
     #print(open(a.seqfn).read())    
     
-
-
-def peak_to_activation(peak):
-    ''' translate a bedfile peak into a fasta identifier for the peak, 
-    and an activation list '''
-    peak = peak.strip()
-    parts = peak.split('\t')
-    chrom = parts[0]
-    start = parts[1]
-    end = parts[2]
-    strand = '+'
+def assemble_subpeak_record(subpeak, celltype_activations, sequence):
+    """ Assemble the FASTA record of sequence and activation """
+    # make the header
+    header ='\t'.join([s for s in subpeak])
+    header = '>' + header
     
+    # make the activation string
+    activation = ';'.join([ct+' '+str(score) for (ct,score) in celltype_activations])
     
-    active_in_peaks_str = [code_to_str[p] for p in activations.split(',')]
-    active_in_peaks_array = parse_access_pattern('-'.join(active_in_peaks_str))
-    peak_ID = chrom + ":" + start + "-" + end + "(" + strand + ")"
-    out_list = [peak_ID]
-    out_list.extend([str(e) for e in active_in_peaks_array.tolist()])
-    act_line = '\t'.join(out_list)    
-    return act_line
+    # append the sequence
+    seq_string = str(sequence)
+    return header, activation, seq_string
 
+
+def write_subpeak_record(subpeak_record, outfile):
+    header, activation, seq_string = subpeak_record
+    print(header, file=outfile)
+    print(activation, file=outfile)
+    print(seq_string, file = outfile)
+
+def get_filehandle(filenum):
+    filename = 'subpeak_seqs_with_ativation_' + str(filenum) + '.fa'
+    if not os.path.exists('fasta_peak_files/'):
+        os.mkdir('fasta_peak_files/')
+    return open(os.path.join('fasta_peak_files',filename), 'w')
+
+def turnover_filehandle(outfile):
+    outfile.close()
+    filenum += 1
+    return get_filehandle(filenum)
+    
 
 ### Grab all cells within the hematopoetic lineage out of the FastATAC
 ### data used from Ryan Corces' paper
@@ -96,16 +112,25 @@ atlas['peak_len'] = atlas['end'] - atlas['start']
 
 
 ### Use pybedtools to extract sequences and activations, formatted as FASTA
-if not os.path.exists('fasta_peak_files/'):
+if os.path.exists('fasta_peak_files/'):
     maxsubs = 100000
+    records = 0
+    filenum = 0
+    outfile = get_filehandle(filenum)
     for i,peak in atlas.iterrows():
         chrom, start, end = peak['chr'], peak['start'], peak['end']
         for subpeak in peak_to_subpeak_list(chrom,start,end):
             sub_chrom, sub_start, sub_end = subpeak
-            celltype_activations = [extract_mean_activation(ct, sub_chrom, sub_start, sub_end) for ct in celltypes]
-            sequences = [extract_sequence(sub_chrom, sub_start, sub_end, hg19_fasta)]
+            celltype_activations = [(ct, extract_mean_activation(ct, sub_chrom, sub_start, sub_end)) for ct in celltypes]
+            sequence = extract_sequence(sub_chrom, sub_start, sub_end, hg19_fasta)
+            subpeak_record = assemble_subpeak_record(subpeak, celltype_activations, sequence)
+            write_subpeak_record(subpeak_record, outfile)
+            records += 1
             
-            # write to file
+            if records % maxsubs == 0:
+                outfile = turnover_filehandle(outfile)
+            
+            
     
     
     
