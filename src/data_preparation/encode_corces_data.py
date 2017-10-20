@@ -13,16 +13,12 @@ import pybedtools
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
 
 ### Read atlas .bed file
-atlas = pandas.read_csv("all_celltypes_peak_atlas_unique.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end", "length"])
-celltypes = [l for l in os.listdir('./peaks')]
-
-
-### Establish a dictionary to return cell type codes in the form of an np.array
-activity_dict = {n: v for v,n in enumerate(celltypes)}
-
-        
+atlas = pandas.read_csv("peaks/all_celltypes_peak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
+celltypes = [l for l in os.listdir('./peaks') if not l.endswith('.bed')]
+atlas['peak_len'] = atlas['end'] - atlas['start']
+      
 ### utility functions, maybe refactor them out later?
-def extend_peak(start,end, length=600):
+def extend_peak(start,end, length=60):
     ''' If start,end is less than length, extend them.  If start,end is more than length, cut them. '''
     peak_length = end - start
     discrepancy = length - peak_length
@@ -34,18 +30,36 @@ def extend_peak(start,end, length=600):
     return new_start, new_end
     
 
-# reverse the activity dict, so I can parse the peaks bed file and make them into an activation table
-code_to_str = {}
-for key in activity_dict.keys():
-    val = activity_dict[key]
-    code_to_str[val] = key
+def peak_to_subpeak_list(peak):
+    """ Take the given peak, split into a list of subregions that make 
+    up the peak """
+    peak = peak.strip()
+    chrom, start, end = peak.split('\t')
+    num_subpeaks = int(end) - int(start) // 60
+    start_list = list(range(start,end,60))
+    end_list = start_list[1:] 
+    end_list.append(start_list[-1] + 60)
+    subpeak_lists = [(chrom,s,e) for s,e in zip(start_list,end_list)]
+    return subpeak_lists
 
-def calculate_activation(chrom,start,end):
-    """ This is a big one.  For a given genomic locus, calculate the 60bp average coverage """
+def extract_activation(celltype, chrom, start, end):
+    """ This is a big one.  For a given genomic locus, calculate the 60bp 
+    average coverage for this celltype"""
+    # get files in peaks/celltype
+    # get coverage over all regions for all celltypes
+    # take the average coverage & return
+    pass
+
+ 
+def extract_sequence(chrom,start,end):
+    """ Extract the sequence of this (sub) peak """
+    # extract the sequence from this region with pybedtools
+    pass
 
 
 def peak_to_activation(peak):
-    ''' translate a bedfile peak into a fasta identifier for the peak, and an activation list '''
+    ''' translate a bedfile peak into a fasta identifier for the peak, 
+    and an activation list '''
     peak = peak.strip()
     parts = peak.split('\t')
     chrom = parts[0]
@@ -61,6 +75,11 @@ def peak_to_activation(peak):
     out_list.extend([str(e) for e in active_in_peaks_array.tolist()])
     act_line = '\t'.join(out_list)    
     return act_line
+
+
+
+
+
 
  
 
