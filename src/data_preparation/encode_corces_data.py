@@ -2,10 +2,12 @@ import os
 import sys
 import pandas
 import numpy as np
-from subprocess import call, check_output
-from process_flanks import make_flanks
-from seq_hdf5 import encode_sequences
+#from process_flanks import make_flanks
+#from seq_hdf5 import encode_sequences
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pybedtools
+import time
 
       
 ### utility functions, maybe refactor them out later?
@@ -39,6 +41,35 @@ def peak_to_subpeak_list(chrom,start,end):
     subpeak_lists = [(chrom,s,e) for s,e in zip(start_list,end_list)]
     return subpeak_lists
 
+
+def map_counts(filename, region):
+    return region.map(pybedtools.BedTool(filename), c=4, o='mean')
+
+def extract_mean_activation_parallel(celltype, chrom, start, end):
+    """ For a given genomic locus, calculate the 60bp 
+    average coverage for this celltype 
+    *** N.B:  need to normalize for library size, not yet done IIRC *** 
+    """
+    
+    my_peak = '\t'.join([chrom,str(start),str(end)])
+    bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
+    my_bg_filenames = get_reps_filenames(celltype)
+    
+    # map the counts that underlie each intersection, take the average across replicates
+    my_dfs = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(map_counts(filename, bedtool_peak)) for filename in my_bg_filenames]
+        
+        for future in as_completed(futures):
+            my_dfs.append(future.to_dataframe())
+            
+        counts_df = pandas.concat(my_dfs)
+    
+    # marshall counts, regions, cell type data into a df
+    counts_df = pandas.concat([c.to_dataframe() for c in my_counts])    
+    return counts_df["name"].mean()    
+
+
 def extract_mean_activation(celltype, chrom, start, end):
     """ For a given genomic locus, calculate the 60bp 
     average coverage for this celltype 
@@ -54,18 +85,18 @@ def extract_mean_activation(celltype, chrom, start, end):
     
     # marshall counts, regions, cell type data into a df
     counts_df = pandas.concat([c.to_dataframe() for c in my_counts])    
-    return counts_dfs["name"].mean()
+    return counts_df["name"].mean()
 
  
 def extract_sequence(chrom,start,end,fasta_file):
     """ Extract the sequence of this (sub) peak 
     default should be: os.path.expanduser("~/projects/data/DNase/genomes/hg19.fa") """
     # extract the sequence from this region with pybedtools
-    my_peak = '\t'.join([chrom,start,end])
+    my_peak = '\t'.join([chrom,str(start),str(end)])
     bedtool_peak = pybedtools.BedTool(my_peak, from_string=True)
     fasta = pybedtools.example_filename(fasta_file)
-    a = a.sequence(fi=fasta)
-    #print(open(a.seqfn).read())    
+    a = bedtool_peak.sequence(fi=fasta)
+    return open(a.seqfn).read()
     
 def assemble_subpeak_record(subpeak, celltype_activations, sequence):
     """ Assemble the FASTA record of sequence and activation """
@@ -74,28 +105,27 @@ def assemble_subpeak_record(subpeak, celltype_activations, sequence):
     header = '>' + header
     
     # make the activation string
-    activation = ';'.join([ct+' '+str(score) for (ct,score) in celltype_activations])
+    #activation = ';'.join([ct+' '+str(score) for (ct,score) in celltype_activations])
     
     # append the sequence
     seq_string = str(sequence)
-    return header, activation, seq_string
+    return header, seq_string
 
 
 def write_subpeak_record(subpeak_record, outfile):
     header, activation, seq_string = subpeak_record
     print(header, file=outfile)
-    print(activation, file=outfile)
+    #print(activation, file=outfile)
     print(seq_string, file = outfile)
 
 def get_filehandle(filenum):
-    filename = 'subpeak_seqs_with_ativation_' + str(filenum) + '.fa'
+    filename = 'subpeak_seqs_no_ativation_' + str(filenum) + '.fa'
     if not os.path.exists('fasta_peak_files/'):
         os.mkdir('fasta_peak_files/')
     return open(os.path.join('fasta_peak_files',filename), 'w')
 
-def turnover_filehandle(outfile):
+def turnover_filehandle(outfile, filenum):
     outfile.close()
-    filenum += 1
     return get_filehandle(filenum)
     
 
@@ -105,10 +135,21 @@ def turnover_filehandle(outfile):
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
 hg19_fasta = os.path.expanduser('~/projects/SeqDemote/data/DNase/genomes/hg19.fa')
 
-### Read atlas .bed file
-atlas = pandas.read_csv("peaks/all_celltypes_peak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
+### Read subpeak atlas .bed file
+atlas = pandas.read_csv("peaks/all_celltypes_subpeak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
 celltypes = [l for l in os.listdir('./peaks') if not l.endswith('.bed')]
 atlas['peak_len'] = atlas['end'] - atlas['start']
+
+
+### Break up peaks into sub-peaks atlas
+if not os.path.exists('peaks/all_celltypes_subpeak_atlas.bed'):
+    outfile = open('peaks/all_celltypes_subpeak_atlas.bed','w')
+    for i,peak in atlas.iterrows():
+        chrom,start, end = peak['chr'], peak['start'], peak['end']
+        for subpeak in peak_to_subpeak_list(chrom, start, end):
+            print(subpeak, file=outfile)
+    outfile.close()
+            
 
 
 ### Use pybedtools to extract sequences and activations, formatted as FASTA
@@ -119,30 +160,28 @@ if os.path.exists('fasta_peak_files/'):
     outfile = get_filehandle(filenum)
     for i,peak in atlas.iterrows():
         chrom, start, end = peak['chr'], peak['start'], peak['end']
-        for subpeak in peak_to_subpeak_list(chrom,start,end):
-            sub_chrom, sub_start, sub_end = subpeak
-            celltype_activations = [(ct, extract_mean_activation(ct, sub_chrom, sub_start, sub_end)) for ct in celltypes]
-            sequence = extract_sequence(sub_chrom, sub_start, sub_end, hg19_fasta)
-            subpeak_record = assemble_subpeak_record(subpeak, celltype_activations, sequence)
-            write_subpeak_record(subpeak_record, outfile)
-            records += 1
+        subpeak_record = extract_sequence(chrom, start, end, hg19_fasta)
+        print(subpeak_record, file=outfile)
+        records += 1
+        
+        if records % maxsubs == 0:
+            print("processed record: ", records)
+            filenum += 1
+            outfile = turnover_filehandle(outfile, filenum)
             
-            if records % maxsubs == 0:
-                outfile = turnover_filehandle(outfile)
-            
-            
+    outfile.close()        
     
     
     
-    
-    try:
-        retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed all_celltypes_peak_atlas_unique.bed -s -fo corces_hematopoetic_peaks.fa", shell=True)
-        if retcode < 0:
-            print("Child was terminated by signal", -retcode, file=sys.stderr)
-        else:
-            print("Child returned", retcode, file=sys.stderr)
-    except OSError as e:
-        print("Execution failed:", e, file=sys.stderr)
+
+#try:
+    #retcode = call("bedtools" + " getfasta -fi ./genomes/hg19.fa -bed all_celltypes_peak_atlas_unique.bed -s -fo corces_hematopoetic_peaks.fa", shell=True)
+    #if retcode < 0:
+        #print("Child was terminated by signal", -retcode, file=sys.stderr)
+    #else:
+        #print("Child returned", retcode, file=sys.stderr)
+#except OSError as e:
+    #print("Execution failed:", e, file=sys.stderr)
 
 
 ### Make a matched (or near matched) set of flanks for the peaks in hematopoetic_peaks.bed
