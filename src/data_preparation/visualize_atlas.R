@@ -2,17 +2,20 @@ library(ggplot2)
 library(gridExtra)
 library(ggExtra)
 library(ggridges)
+library(ggrepel)
+
 library(scales)
 library(AtlasAnnotater)
 
 setwd('~/projects/SeqDemote/results/diagnostic_plots/ATAC/')
-pdf(file = "atlas_diagnostic_plots.pdf", width = 15, height = 13)
+atlas <- read.csv(file = "annotated_atlas.csv")
+atlas <- data.table(atlas[,.(seqnames, start, end, width, exon, intron, annot, nearest.gene, nearest.gene.dist)])
+setnames(atlas, c("annot", "nearest.gene"), c("annotation","nearest_gene"))
 
-pltList <- list()
 
 # Peaks by annotation
-total = just_rel[,.N]
-grouped_peaks = just_rel[,.N, by=annotation]
+total = atlas[,.N]
+grouped_peaks = atlas[,.N, by=annotation]
 grouped_peaks[, percentage := N / total]
 pba <- ggplot(grouped_peaks, aes(x=annotation, fill=annotation)) + 
   geom_col(aes(y=N)) + 
@@ -22,31 +25,29 @@ pba <- ggplot(grouped_peaks, aes(x=annotation, fill=annotation)) +
   ylab("Number of peaks") + 
   xlab("Peak annotation")
 
-pltList[[1]] <- pba
 
 # Peak length by chromosome
-plc <- ggplot(just_rel[width < 1600,], aes(x = width, y = seqnames)) +
+plc <- ggplot(atlas[width < 1600,], aes(x = width, y = seqnames)) +
   geom_density_ridges(stat = "binline",bins=50) + 
   xlim(c(0,1800)) + 
   xlab("Peak length (bp)") + ylab("Chromosome") + 
   theme_ridges(grid = FALSE)
 
-pltList[[2]] <- plc
 
 # Fine-grained histogram of peak lengths
-fgpl <- ggplot(just_rel[width < 1800,], aes(x = width, y = annotation)) +
+fgpl <- ggplot(atlas[width < 1800,], aes(x = width, y = annotation)) +
   geom_density_ridges(aes(fill=annotation), stat = "binline",bins=80) +
   labs(title="Peak lengths by annotation")
 
-pltList[[3]] <- fgpl
+
 
 # Gene complexity plot: number of peaks / gene
 
-# Count peaks / gene
-gene_count = just_rel[annotation != "intergenic", .N, by = nearest_gene]
+  # Count peaks / gene
+gene_count = atlas[annotation != "intergenic", .N, by = nearest_gene]
 setnames(gene_count, "N", "count")
 
-# Get gene length data
+  # Get gene length data
 annot = loadAnnot("hg19")
 tx_lens = GenomicFeatures::transcriptLengths(annot$txdb, with.cds_len = TRUE)
 tx_lens_dt = data.table(tx_lens)
@@ -55,18 +56,37 @@ gene_lens[,avg_coding_len := mean(cds_len), by=gene_name]
 gene_lens[, total_exons := max(nexon), by=gene_name]
 gene_lens[, max_len := max(tx_len), by=gene_name]
 gene_lens = gene_lens[!duplicated(gene_id),.(gene_id,gene_name,avg_coding_len,total_exons,max_len)]
-gene_length_dt = merge(gene_count, merged_lens, by.x=c("nearest_gene"), by.y=c("gene_name"))
+gene_length_dt = merge(gene_count, gene_lens, by.x=c("nearest_gene"), by.y=c("gene_name"))
 gene_length_dt[avg_coding_len > 0, coding := "coding"]
 gene_length_dt[avg_coding_len == 0, coding := "non-coding"]
 gene_length_dt[,peak_per_bp := count / max_len]
 
-gcp = ggplot(gene_length_dt, aes(x=max_len,y=count)) +
-  geom_point(aes(alpha=0.25)) + guides(alpha=FALSE) + 
+gcp = ggplot(gene_length_dt, aes(x=max_len,y=count, shape=coding)) +
+  geom_point(aes(alpha=1/40)) + guides(alpha=FALSE) +
+  geom_density2d() + 
   scale_x_log10() +
+  scale_shape_discrete(name="Gene is") + 
+  geom_text_repel(
+    data = gene_length_dt[count > 150,],
+    aes(label = nearest_gene),
+    size = 3,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  ) + 
   ggtitle("Peaks per gene", subtitle="by gene length") + 
   xlab("Gene length (log10 bp)") + 
-  ylab("Number of peaks") +
-  facet_wrap(~coding)
+  ylab("Number of peaks")
+
+
+
+pdf(file = "atlas_diagnostic_plots.pdf", width = 15, height = 13)
+
+# compile plots into a list
+pltList <- list()
+pltList[[1]] <- pba
+pltList[[2]] <- plc
+pltList[[3]] <- fgpl
+pltList[[4]] <- gcp
 
 # display the plots in a grid
 grid.arrange(grobs=pltList, ncol=2)
