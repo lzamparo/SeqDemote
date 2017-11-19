@@ -134,25 +134,28 @@ def turnover_filehandle(outfile, filenum):
 
 os.chdir(os.path.expanduser('~/projects/SeqDemote/data/ATAC/corces_heme'))
 hg19_fasta = os.path.expanduser('~/projects/SeqDemote/data/DNase/genomes/hg19.fa')
-
-### Read subpeak atlas .bed file
-atlas = pandas.read_csv("peaks/all_celltypes_subpeak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
 celltypes = [l for l in os.listdir('./peaks') if not l.endswith('.bed')]
+
+### Break up peaks into sub-peaks atlas
+#if not os.path.exists('peaks/all_celltypes_subpeak_atlas.bed'):
+    #outfile = open('peaks/all_celltypes_subpeak_atlas.bed','w')
+    #for i,peak in atlas.iterrows():
+        #chrom,start, end = peak['chr'], peak['start'], peak['end']
+        #for subpeak in peak_to_subpeak_list(chrom, start, end):
+            #print(subpeak, file=outfile)
+    #outfile.close()
+            
+### Use pybedtools to extract sequences and activations, formatted as FASTA
+### Read subpeak atlas .bed file
+    
+### For now: each peak in each celltype should identify the subpeak atlas where it was sourced
+### Eventually: each subpeak gets written out with its mean GC-corrected, sizeFactor normalized coverage score per celltype
+    
+atlas = pandas.read_csv("peaks/all_celltypes_subpeak_atlas.bed", sep="\t", header=0, index_col=None, names=["chr", "start", "end"])
+
 atlas['peak_len'] = atlas['end'] - atlas['start']
 
 
-### Break up peaks into sub-peaks atlas
-if not os.path.exists('peaks/all_celltypes_subpeak_atlas.bed'):
-    outfile = open('peaks/all_celltypes_subpeak_atlas.bed','w')
-    for i,peak in atlas.iterrows():
-        chrom,start, end = peak['chr'], peak['start'], peak['end']
-        for subpeak in peak_to_subpeak_list(chrom, start, end):
-            print(subpeak, file=outfile)
-    outfile.close()
-            
-
-
-### Use pybedtools to extract sequences and activations, formatted as FASTA
 if os.path.exists('fasta_peak_files/'):
     maxsubs = 100000
     records = 0

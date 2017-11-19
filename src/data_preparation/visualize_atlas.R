@@ -79,7 +79,7 @@ gcp = ggplot(gene_length_dt, aes(x=max_len,y=count, shape=coding)) +
 
 
 
-pdf(file = "atlas_diagnostic_plots.pdf", width = 15, height = 13)
+pdf(file = "reduced_atlas_diagnostic_plots.pdf", width = 15, height = 13)
 
 # compile plots into a list
 pltList <- list()
