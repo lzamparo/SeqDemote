@@ -51,8 +51,6 @@ my_counts = [r.map(pybedtools.BedTool(b), c=4, o='mean') for b in my_bg_filename
 my_regions_dfs = [r.to_dataframe() for r in my_regions]
 my_counts_dfs = [c.to_dataframe() for c in my_counts]
 
-# plot the counts bedgraph for the region
-
     
 
 

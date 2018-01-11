@@ -11,3 +11,4 @@ data/invitro/hbZIPs/*.rar
 data/models/*.th
 src/.ipynb_checkpoints
 src/models/checkpoints/*.pkl
+*.DS_Store
