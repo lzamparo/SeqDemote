@@ -152,6 +152,7 @@ def write_subpeak_record(subpeak_record, outfile):
     print(activation, file=outfile)
     print(seq_string, file = outfile)
 
+
 def get_filehandle(filenum, prefix='fasta_peak_files/'):
     filename = 'subpeak_seqs_no_activation_' + str(filenum) + '.fa'
     if not os.path.exists(prefix):
