@@ -63,7 +63,7 @@ def make_flanks(my_args=None):
         for peak in f:
             chrom, start, end, *rest = peak.split()
             chrom = chrom.strip()
-            up, down = flanks_from_peak(int(start), int(end), chrom)
+            up, down = flanks_from_peak(int(start), int(end), chrom, options.feature_size)
             up_overlaps = chrom_trees[chrom][up.start:up.end]
             down_overlaps = chrom_trees[chrom][down.start:down.end]
             if len(up_overlaps) == 0 and is_valid_flank(up, chrom_lengths):
@@ -74,15 +74,18 @@ def make_flanks(my_args=None):
     #################################################################
     # print the flanks to a .bed file
     #################################################################    
-    outfile = options.flank_bed + '.bed'
+    if not options.flank_bed.endswith(".bed"):
+        outfile = options.flank_bed + '.bed'
+    else:
+        outfile = options.flank_bed
     with open(outfile, 'w') as f:
         for flank in my_flanks:
             print(flank, file=f)
 
 
-def flanks_from_peak(start,end, chrom):
-    upstream = Flank(chrom, start - 600, start, set())
-    downstream = Flank(chrom, end, end + 600, set())
+def flanks_from_peak(start,end, chrom, length=600):
+    upstream = Flank(chrom, start - length, start, set())
+    downstream = Flank(chrom, end, end + length, set())
     return upstream, downstream
 
 def is_valid_flank(f, chrom_lengths):

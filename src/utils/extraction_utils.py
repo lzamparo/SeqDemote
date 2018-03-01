@@ -18,7 +18,7 @@ def extract_chrom_start_end(line, extractor):
         raise IOError(error_msg)
     return match.group(1), match.group(2), match.group(3)
 
-def fasta_to_lists(filename):
+def fasta_to_lists(filename,duplicate_action="stop"):
     ''' parse a fasta file, returning a dict of lists for each of the 
     Fasta file components: chrom, start, end, sequence '''
     header_exctractor = re.compile('>?(chr[X|Y|0-9]{1,2})[-:]([0-9]+)-([0-9]+)')
@@ -27,7 +27,8 @@ def fasta_to_lists(filename):
     end_list = []
     seq_list = []
     peaks = Fasta(filename, 
-                 sequence_always_upper=True)
+                 sequence_always_upper=True,
+                 duplicate_action=duplicate_action)
     for record in peaks:
         chrom, start, end = extract_chrom_start_end(record.name, header_exctractor)
         chrom_list.append(chrom)
