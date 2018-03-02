@@ -9,9 +9,10 @@ from process_flanks import make_flanks
 from subprocess import run
 from utils import extraction_utils
 
+
 ### Grab all cells within the select GM12878 ChIP-seq factor atlases
 os.chdir(os.path.expanduser("~/projects/SeqDemote/data/ChIP/GM12878"))
-hg19_fasta = os.path.expanduser("~/projects/SeqDemote/data/DNase/genomes/hg19.fa")
+hg19_fasta = os.path.expanduser("~/projects/SeqDemote/data/genomes/hg19.fa")
 
 
 # make the peaks & flanks regions for each factor
@@ -87,14 +88,14 @@ for f in factors:
     
     with open(os.path.join('chip_fasta_files/', prefix, peak_file),'w') as outfile:
         for i,peak in peaks_df.iterrows():
-            header =  "\t".join([peak['chrom'], str(peak['start']), str(peak['end']),"ChIP"])
+            header = extraction_utils.write_fasta_header(peak['chrom'],peak['start'],peak['end'],"ChIP_peak")
             sequence = peak['sequence']      
             print(header, file=outfile)
             print(sequence, file=outfile)
             
     with open(os.path.join('chip_fasta_files/', prefix, flank_file),'w') as outfile:
         for i,flank in flanks_df.iterrows():
-            header =  "\t".join([flank['chrom'], str(flank['start']), str(flank['end']),"ChIP"])
+            header = extraction_utils.write_fasta_header(flank['chrom'],flank['start'],flank['end'],"ChIP_flank")
             sequence = flank['sequence']      
             print(header, file=outfile)
             print(sequence, file=outfile)    

@@ -129,6 +129,12 @@ def assemble_subpeak_record(subpeak, peak_type):
     header = '>' + '-'.join([str(s) for s in subpeak]) + '\t' + peak_type
     return header
 
+def write_fasta_header(chrom, start, end, rest=None):
+    ''' Assemble a canonical FASTA header string '''
+    header = '>' + chrom + ":" + str(start) + '-' + str(end)
+    if rest is not None:
+        header = header + "\t" + str(rest)
+    return header
 
 def assemble_subpeak_record_celltype(subpeak, celltype_activations, sequence):
     """ Assemble the FASTA record of sequence and activation 
