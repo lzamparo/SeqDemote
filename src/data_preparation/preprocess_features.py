@@ -33,9 +33,9 @@ def main():
     (options,args) = parser.parse_args()
 
     if len(args) != 1:
-    	parser.error('Must provide file labeling the targets and providing BED file paths.')
+        parser.error('Must provide file labeling the targets and providing BED file paths.')
     else:
-    	target_beds_file = args[0]
+        target_beds_file = args[0]
 
     # determine whether we'll add to an existing DB
     db_targets = []
@@ -55,14 +55,14 @@ def main():
     target_beds = []
     target_dbi = []
     for line in open(target_beds_file):
-    	a = line.split()
+        a = line.split()
         if len(a) != 2:
             print a
             print >> sys.stderr, 'Each row of the target BEDS file must contain a label and BED file separated by whitespace'
             exit(1)
-    	target_dbi.append(len(db_targets))
-    	db_targets.append(a[0])
-    	target_beds.append(a[1])
+        target_dbi.append(len(db_targets))
+        db_targets.append(a[0])
+        target_beds.append(a[1])
 
     # read in chromosome lengths
     chrom_lengths = {}

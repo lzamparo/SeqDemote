@@ -63,7 +63,10 @@ def peak_to_subpeak_list(chrom,start,end,size=60):
     num_subpeaks = int(end) - int(start) // int(size)
     start_list = list(range(start,end,size))
     end_list = start_list[1:] 
-    end_list.append(start_list[-1] + size)
+    last_endpoint = start_list[-1] + size
+    if last_endpoint > end:
+        last_endpoint = end
+    end_list.append(last_endpoint)
     subpeak_lists = [(chrom,s,e) for s,e in zip(start_list,end_list)]
     return subpeak_lists
 

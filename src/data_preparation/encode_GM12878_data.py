@@ -52,9 +52,11 @@ for chromosome in chromosomes:
             
             for subpeak in extraction_utils.peak_to_subpeak_list(chrom, start, end):
                 chrom, substart, subend = subpeak
-                subsequence = sequence[substart:subend]
+                seq_start = substart - start
+                seq_end = subend - start
+                subsequence = sequence[seq_start:seq_end]
                 print(extraction_utils.assemble_subpeak_record(subpeak, peak_type), file=outfile)
-                print(sequence, file=outfile)
+                print(subsequence, file=outfile)
                 
          
 # read and transform flanks into sub-flank regions
@@ -132,4 +134,4 @@ for chromosome in chromosomes:
                 chrom, substart, subend = subflank
                 subsequence = sequence[substart:subend]
                 print(extraction_utils.assemble_subpeak_record(subflank, flank_type), file=outfile)
-                print(sequence, file=outfile)
+                print(subsequence, file=outfile)
