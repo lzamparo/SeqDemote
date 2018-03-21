@@ -2,7 +2,10 @@
 from __future__ import print_function
 from optparse import OptionParser
 import sys
+import re
+import os
 
+import pandas as pd
 import h5py
 import numpy.random as npr
 import numpy as np
@@ -10,15 +13,14 @@ import numpy as np
 import subprocess
 
 from utils import dna_io
-import split_ttv
 
 ################################################################################
-# seq_hdf5.py
+# mouse_asa_hdf5.py
 #
-# Make an HDF5 file for Torch input out of a FASTA file and targets text file,
-# dividing the data into training, validation, and test.
+# Make an HDF5 file for tensor input out of a FASTA file and targets text file,
+# dividing the data into training, validation, and test data sets
 #
-# Basset data set is made with these args: 
+# Usage is like 
 # seq_hdf5.py -c -r -t 71886 -v 70000 encode_roadmap.fa encode_roadmap_act.txt encode_roadmap.h5
 ################################################################################
 
@@ -26,7 +28,7 @@ import split_ttv
 # main
 ################################################################################
 def encode_sequences(my_args=None):
-    usage = 'usage: %prog [options] <fasta_file> <targets_file> <out_file>'
+    usage = 'usage: %prog [options] <maternal_fasta_file> <paternal_fasta_file> <targets_file> <out_file>'
     parser = OptionParser(usage)
     parser.add_option('-b', dest='batch_size', default=None, type='int', help='Align sizes with batch size')
     parser.add_option('-c', dest='counts', default=False, action='store_true', help='Validation and training proportions are given as raw counts [Default: %default]')
@@ -44,11 +46,12 @@ def encode_sequences(my_args=None):
     else:
         (options,args) = parser.parse_args(args=my_args)
     if len(args) != 3:
-        parser.error('Must provide fasta file, targets file, and an output prefix')
+        parser.error('Must provide fasta files, targets file, and an output prefix')
     else:
-        fasta_file = args[0]
-        targets_file = args[1]
-        out_file = args[2]
+        maternal_fasta_file = args[0]
+        paternal_fasta_file = args[1]
+        targets_file = args[2]
+        out_file = args[3]
 
     # seed rng before shuffle
     npr.seed(options.random_seed)
@@ -57,20 +60,17 @@ def encode_sequences(my_args=None):
     # prepare bookeeping data for processing the sizes of each chunk
     # of the fasta input
     #################################################################    
-    fasta_handle = open(fasta_file, 'r')
+    maternal_fasta_handle = open(maternal_fasta_file, 'r')
+    paternal_fasta_handle = open(paternal_fasta_file, 'r')
     targets_handle = open(targets_file, 'r')
-
-
-    # get counts, train & test & validation indices + counts
-    train_count, test_count, valid_count = split_ttv.split_ttv(fasta_file, options.test_pct, options.valid_pct, options.counts)
-    train_indices, test_indices, validation_indices = split_ttv.split_ttv_indices(fasta_file, train_count, test_count, valid_count, options.chunks)
-    ttv_counts = split_ttv.split_ttv_counts(fasta_file, train_count, test_count, valid_count, options.chunks)    
+ 
 
     #################################################################
     # construct hdf5 representation
     #################################################################
     h5f = h5py.File(out_file, 'a')
-    target_labels = [t for t in targets_handle.readline().strip().split('\t') if not t.endswith("ID")]
+    
+    target_labels = blerg
     target_labels = np.array(target_labels).astype('|S21')
 
     group = h5f.create_group(options.group)
@@ -180,8 +180,72 @@ def encode_sequences(my_args=None):
     fasta_handle.close()
     targets_handle.close()
     h5f.close()
+    
+    
+def parse_peak(l):
+    coords,counts = l.split()
+    maternal, paternal = counts.split(';')
+    return coords, maternal, paternal
 
 
+def scrape_name(filename, get_rep_num):
+    m = get_rep_num.match(filename)
+    return m.groups()[0]
+
+
+def assign_reads(total_read_lines):
+    ''' Assign reads to either paternal, maternal according to binomail distribution w p=0.5 '''
+    
+    maternal_reads = []
+    paternal_reads = []
+    for l in total_read_lines:
+        coords, count = l.split()
+        m = np.random.binomial(count, 0.5)
+        p = int(count) - m
+        maternal_reads.append(m)
+        paternal_reads.append(p)
+    return maternal_reads, paternal_reads
+
+
+def process_target_celltype(ct_dir):
+    ''' Take a list of cell type replicates within a cell type directory, 
+    produce a target table of counts 
+    
+    peakID	H1hesc	CD34	CD14	CD56	CD3	CD19
+chr1:1208992-1209592(+)	1	1	1	1	1	1
+chr1:11120062-11120662(+)	1	1	1	1	1	1
+chr1:161067622-161068222(+)	1	1	1	1	1	1
+chr4:84376575-84377175(+)	1	1	1	1	1	1
+    '''
+    
+    ct_name = os.path.basename(ct_dir)
+    differential_reps = [f for f in os.listdir(ct_dir) if f.endswith("peak.cnt")]
+    total_count_reps = [f for f in os.listdir(ct_dir) if f.endswith("total.cnt")]
+    get_rep_num = re.compile('.*\_r([\d])\_.*')
+
+    dfs = []
+    for r,t in zip(differential_reps, total_count_reps):
+        repname = ct_name + "_rep" + scrape_name(r,get_rep_num) + "_"
+        with open(os.path.join(ct_dir,r), 'r') as d_file, open(os.path.join(ct_dir,t), 'r') as t_file:
+            d_lines = [l.strip() for l in d_file.readlines()]
+            t_lines = [l.strip() for l in t_file.readlines()]
+            coords = [c for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            maternal = [int(m) for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            paternal = [int(p) for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            
+            maternal_share_from_total, paternal_share_from_total = assign_reads(
+                t_lines)
+            
+            maternal = [m + (mt - m) for mt, m in zip(maternal_share_from_total, maternal) if mt - m > 0 else m]
+            paternal = [p + (pt - p) for pt, p in zip(paternal_share_from_total, paternal) if pt - p > 0 else p]
+            
+        df = pd.DataFrame({"peakID": coords, repname+"b6": maternal, repname+"cast": paternal})
+        dfs.append(df)
+    
+    peak_stats = pd.concat(dfs)  #TODO: need to merge rather than concat
+
+    
+    
 
 def batch_round(count, batch_size):
     if batch_size != None:
