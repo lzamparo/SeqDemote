@@ -193,18 +193,18 @@ def scrape_name(filename, get_rep_num):
     return m.groups()[0]
 
 
-def assign_reads(total_read_lines):
-    ''' Assign reads to either paternal, maternal according to binomail distribution w p=0.5 '''
+def common_reads(total_read_lines, asa_snp_reads):
+    ''' Calculates the read coverage that can plausibly be shared between maternal and paternal chromosomes. 
+    We assume here that for a given peak, the total read coverage for that peak that cannot be assigned to
+    either maternal or paternal '''
     
-    maternal_reads = []
-    paternal_reads = []
-    for l in total_read_lines:
+    common_reads = []
+    for l,a in zip(total_read_lines, asa_snp_reads):
         coords, count = l.split()
-        m = np.random.binomial(count, 0.5)
-        p = int(count) - m
-        maternal_reads.append(m)
-        paternal_reads.append(p)
-    return maternal_reads, paternal_reads
+        reads = int(count) - a
+        common_reads.append(reads)
+        
+    return common_reads
 
 
 def process_target_celltype(ct_dir):
@@ -233,16 +233,16 @@ chr4:84376575-84377175(+)	1	1	1	1	1	1
             maternal = [int(m) for (c,m,p) in [parse_peak(l) for l in d_lines]]
             paternal = [int(p) for (c,m,p) in [parse_peak(l) for l in d_lines]]
             
-            maternal_share_from_total, paternal_share_from_total = assign_reads(
-                t_lines)
+            asa_snp_sum = [m + p for (m,p) in maternal, paternal]
+            common_reads = assign_reads(t_lines, asa_snp_sum)
             
-            maternal = [m + (mt - m) for mt, m in zip(maternal_share_from_total, maternal) if mt - m > 0 else m]
-            paternal = [p + (pt - p) for pt, p in zip(paternal_share_from_total, paternal) if pt - p > 0 else p]
+            maternal = [m + c for m, c in zip(maternal, common)]
+            paternal = [p + c for p, c in zip(paternal, common)]
             
         df = pd.DataFrame({"peakID": coords, repname+"b6": maternal, repname+"cast": paternal})
         dfs.append(df)
     
-    peak_stats = pd.concat(dfs)  #TODO: need to merge rather than concat
+    peak_stats = pd.concat([d.reset_index() for d in dfs], axis=1)  
 
     
     
