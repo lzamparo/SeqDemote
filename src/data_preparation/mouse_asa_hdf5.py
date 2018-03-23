@@ -28,10 +28,9 @@ from utils import dna_io
 # main
 ################################################################################
 def encode_sequences(my_args=None):
-    usage = 'usage: %prog [options] <maternal_fasta_file> <paternal_fasta_file> <targets_file> <out_file>'
+    usage = 'usage: %prog [options] <maternal_fasta_file> <paternal_fasta_file> <targets_dir> <out_file>'
     parser = OptionParser(usage)
     parser.add_option('-b', dest='batch_size', default=None, type='int', help='Align sizes with batch size')
-    parser.add_option('-c', dest='counts', default=False, action='store_true', help='Validation and training proportions are given as raw counts [Default: %default]')
     parser.add_option('-e', dest='extend_length', type='int', default=None, help='Extend all sequences to this length [Default: %default]')
     parser.add_option('-r', dest='permute', default=False, action='store_true', help='Permute sequences [Default: %default]')
     parser.add_option('-s', dest='random_seed', default=1, type='int', help='numpy.random seed [Default: %default]')
@@ -45,12 +44,12 @@ def encode_sequences(my_args=None):
         (options,args) = parser.parse_args()
     else:
         (options,args) = parser.parse_args(args=my_args)
-    if len(args) != 3:
-        parser.error('Must provide fasta files, targets file, and an output prefix')
+    if len(args) != 4:
+        parser.error('Must provide both maternal and paternal fasta files, targets directory, and an output prefix')
     else:
         maternal_fasta_file = args[0]
         paternal_fasta_file = args[1]
-        targets_file = args[2]
+        targets_dir = args[2]
         out_file = args[3]
 
     # seed rng before shuffle
@@ -60,17 +59,21 @@ def encode_sequences(my_args=None):
     # prepare bookeeping data for processing the sizes of each chunk
     # of the fasta input
     #################################################################    
-    maternal_fasta_handle = open(maternal_fasta_file, 'r')
-    paternal_fasta_handle = open(paternal_fasta_file, 'r')
-    targets_handle = open(targets_file, 'r')
+    maternal_fasta_handle = open(os.path.expanduser(maternal_fasta_file), 'r')
+    paternal_fasta_handle = open(os.path.expanduser(paternal_fasta_file), 'r')
  
-
+    
     #################################################################
     # construct hdf5 representation
     #################################################################
-    h5f = h5py.File(out_file, 'a')
+    #h5f = h5py.File(out_file, 'a')
     
-    target_labels = blerg
+    # get pandas df for targets
+    target_df = process_target_celltype_no_totals(os.path.expanduser(targets_dir))
+    nrows, ncols = target_df.shape
+    
+    
+    target_labels = target_df.describe()
     target_labels = np.array(target_labels).astype('|S21')
 
     group = h5f.create_group(options.group)
@@ -83,6 +86,8 @@ def encode_sequences(my_args=None):
     if options.kmerize > 1:
         alphabet_size = int(pow(4, options.kmerize))
         feature_cols = options.columns - options.kmerize + 1
+        
+   # need size and shape estimates of test, valid sets here, as well as      
 
     if train_count > 0:
         train_in_dset = data_group.create_dataset('train_in', shape=(0, alphabet_size, 1, feature_cols),  maxshape=(None, alphabet_size, 1, feature_cols), dtype='uint8')
@@ -207,6 +212,39 @@ def common_reads(total_read_lines, asa_snp_reads):
     return common_reads
 
 
+def process_target_celltype_no_totals(ct_dir):
+    ''' Take a list of cell type replicates within a cell type directory, 
+    produce a target table of counts.  Ignore the total counts, just 
+    use the differentially accessible reads '''
+    ct_name = os.path.basename(ct_dir.strip('/'))
+    differential_reps = [f for f in os.listdir(ct_dir) if f.endswith("peak.cnt")]
+    get_rep_num = re.compile('.*\_r([\d])\_.*')
+
+    dfs = []
+    for r in differential_reps:
+        repname = ct_name + "_rep" + scrape_name(r,get_rep_num) + "_"
+        with open(os.path.join(ct_dir,r), 'r') as d_file:
+            d_lines = [l.strip() for l in d_file.readlines()]
+            coords = [c for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            maternal = [int(m) for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            paternal = [int(p) for (c,m,p) in [parse_peak(l) for l in d_lines]]
+            
+        df = pd.DataFrame({"peakID": coords, repname+"b6": maternal, repname+"cast": paternal})
+        
+        dfs.append(df)
+    
+    # merge all dfs on peakID
+    peak_stats = dfs[0]
+    for df in dfs[1:]:
+        peak_stats = pd.merge(peak_stats, df, on="peakID")
+    
+    # reorder columns
+    cols = list(peak_stats)
+    ordered_cols = [cols[2]]
+    ordered_cols.extend(cols[0:2])
+    ordered_cols.extend(cols[3:])
+    return peak_stats.ix[:, ordered_cols]    
+
 def process_target_celltype(ct_dir):
     ''' Take a list of cell type replicates within a cell type directory, 
     produce a target table of counts 
@@ -218,7 +256,7 @@ chr1:161067622-161068222(+)	1	1	1	1	1	1
 chr4:84376575-84377175(+)	1	1	1	1	1	1
     '''
     
-    ct_name = os.path.basename(ct_dir)
+    ct_name = os.path.basename(ct_dir.strip('/'))
     differential_reps = [f for f in os.listdir(ct_dir) if f.endswith("peak.cnt")]
     total_count_reps = [f for f in os.listdir(ct_dir) if f.endswith("total.cnt")]
     get_rep_num = re.compile('.*\_r([\d])\_.*')
@@ -233,8 +271,8 @@ chr4:84376575-84377175(+)	1	1	1	1	1	1
             maternal = [int(m) for (c,m,p) in [parse_peak(l) for l in d_lines]]
             paternal = [int(p) for (c,m,p) in [parse_peak(l) for l in d_lines]]
             
-            asa_snp_sum = [m + p for (m,p) in maternal, paternal]
-            common_reads = assign_reads(t_lines, asa_snp_sum)
+            asa_snp_sum = [m + p for (m,p) in zip(maternal, paternal)]
+            common = common_reads(t_lines, asa_snp_sum)
             
             maternal = [m + c for m, c in zip(maternal, common)]
             paternal = [p + c for p, c in zip(paternal, common)]
@@ -242,9 +280,12 @@ chr4:84376575-84377175(+)	1	1	1	1	1	1
         df = pd.DataFrame({"peakID": coords, repname+"b6": maternal, repname+"cast": paternal})
         dfs.append(df)
     
-    peak_stats = pd.concat([d.reset_index() for d in dfs], axis=1)  
+    # merge all dfs on peakID
+    peak_stats = dfs[0]
+    for df in dfs[1:]:
+        peak_stats = pd.merge(peak_stats, df, on="peakID")
+    return peak_stats
 
-    
     
 
 def batch_round(count, batch_size):
@@ -256,4 +297,6 @@ def batch_round(count, batch_size):
 # __main__
 ################################################################################
 if __name__ == '__main__':
-    encode_sequences()
+    # DEBUG
+    arg_string = "-b 20 ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Ref.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Alt.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/mapped_reads/CD8_effector/ mouse_asa.h5"
+    encode_sequences(arg_string.split())
