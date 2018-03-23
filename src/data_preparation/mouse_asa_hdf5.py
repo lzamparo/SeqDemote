@@ -72,9 +72,7 @@ def encode_sequences(my_args=None):
     target_df = process_target_celltype_no_totals(os.path.expanduser(targets_dir))
     nrows, ncols = target_df.shape
     
-    
-    target_labels = target_df.describe()
-    target_labels = np.array(target_labels).astype('|S21')
+    target_labels = np.array(list(target_df)).astype('|S21')
 
     group = h5f.create_group(options.group)
     group.create_dataset('target_labels', data=target_labels)
@@ -87,7 +85,7 @@ def encode_sequences(my_args=None):
         alphabet_size = int(pow(4, options.kmerize))
         feature_cols = options.columns - options.kmerize + 1
         
-   # need size and shape estimates of test, valid sets here, as well as      
+   # need size and shape estimates of test, valid sets here     
 
     if train_count > 0:
         train_in_dset = data_group.create_dataset('train_in', shape=(0, alphabet_size, 1, feature_cols),  maxshape=(None, alphabet_size, 1, feature_cols), dtype='uint8')
