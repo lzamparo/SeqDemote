@@ -108,7 +108,7 @@ def get_training_data():
 def test_create_batch_gen():
     """ Can I build a batch generator? """
     training_data, training_targets = get_training_data()
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(range(num_chunks_train), my_gen):
         ok_(x_chunk.shape == chunk_train_shape)
 
@@ -119,7 +119,7 @@ def test_exhaust_data():
     training_data, training_targets = get_training_data()
     seen_pts = 0
     num_chunks = range(num_chunks_train)
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
@@ -130,7 +130,7 @@ def test_buffered_batch_gen_threaded():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_training_data()
-    my_gen = buffering.buffered_gen_threaded(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
+    my_gen = buffering.buffered_gen_threaded(generators.labeled_sequence_gen(training_data, training_targets), buffer_size=3)
     num_chunks = range(num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
@@ -144,7 +144,7 @@ def test_buffered_batch_gen_mp():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_training_data()
-    my_gen = buffering.buffered_gen_mp(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
+    my_gen = buffering.buffered_gen_mp(generators.labeled_sequence_gen(training_data, training_targets), buffer_size=3)
     num_chunks = range(num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
@@ -160,7 +160,7 @@ def test_buffered_kmerizing_gen():
     """ Can I create a buffered batch generator that kmerizes the data? """
     
     training_data, training_targets = get_training_data()
-    my_gen = buffering.buffered_gen_mp(generators.train_kmerize_gen(training_data, training_targets, kmersize=3), buffer_size=3)
+    my_gen = buffering.buffered_gen_mp(generators.labeled_kmer_sequence_gen(training_data, training_targets, kmersize=3), buffer_size=3)
     num_chunks = range(num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):

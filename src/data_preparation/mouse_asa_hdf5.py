@@ -38,7 +38,7 @@ def encode_sequences(my_args=None):
     parser.add_option('-t', dest='test_chrom', default=6, type='string', help='Test % [Default: %default]')
     parser.add_option('-k', dest='kmerize', default=1, type='int', help='produce kmer-ized representation of the input for this value of k')
     parser.add_option('-v', dest='valid_chrom', default=19, type='string', help='Validation % [Default: %default]')
-    parser.add_option('-l', dest='columns', default=300, type='int', help='number of bases (i.e feature columns) in the input')
+    parser.add_option('-l', dest='columns', default=2000, type='int', help='number of bases (i.e feature columns) in the input')
     parser.add_option('-u', dest='chunks', default=10, type='int', help='Process the fasta file in this many chunks to conserve RAM')
     parser.add_option('-f', dest='flanks', default=True, help='Generate flanking sequences?')
     parser.add_option('-g', dest='group', default='/', type='str', help='All data (both encoded sequences and activation labels) are stored underneath this group.  Will be created if it does not arleady exist.')
@@ -190,31 +190,18 @@ def encode_sequences(my_args=None):
             
     
     # encode training seqs
-    b6_train_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, b6_fasta) for coords,sequence in zip(
-        b6_train["header"], 
-        b6_train["sequences"])])
-    cast_train_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, cast_fasta) for coords,sequence in zip(
-        cast_train["header"], 
-        cast_train["sequences"])])  
-    
+    b6_train_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(b6_train["sequences"], stack=False)])
+    cast_train_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(cast_train["sequences"], stack=False)])
+
     # encode test seqs
-    b6_test_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, b6_fasta) for coords,sequence in zip(
-        b6_test["header"], 
-        b6_test["sequences"])]) 
-    cast_test_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, cast_fasta) for coords,sequence in zip(
-        cast_test["header"], 
-        cast_test["sequences"])])
+    b6_test_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(b6_test["sequences"], stack=False)])
+    cast_test_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(cast_test["sequences"], stack=False)])
     
     # encode valid seqs
-    b6_valid_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, b6_fasta) for coords,sequence in zip(
-        b6_valid["header"], 
-        b6_valid["sequences"])])
-    cast_valid_sequences = onehot_encode_sequences([resize_sequences(coords, sequence, cast_fasta) for coords,sequence in zip(
-        cast_valid["header"], 
-        cast_valid["sequences"])])  
+    b6_valid_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(b6_valid["sequences"], stack=False)])
+    cast_valid_sequences = np.stack([pad_sequences(s) for s in onehot_encode_sequences(cast_valid["sequences"], stack=False)])  
 
     # reshape sequences, combine with flanks if needed, write to h5 file
-    
     b6_train_sequences = b6_train_sequences.reshape((b6_train_sequences.shape[0],4,1,b6_train_sequences.shape[-1]))
     cast_train_sequences = cast_train_sequences.reshape((cast_train_sequences.shape[0],4,1,cast_train_sequences.shape[-1]))
     b6_test_sequences = b6_test_sequences.reshape((b6_test_sequences.shape[0],4,1,b6_test_sequences.shape[-1]))
@@ -419,8 +406,9 @@ def target_df_to_array(df):
     return np.vstack((b6_counts.as_matrix(), cast_counts.as_matrix()))
 
 
-def onehot_encode_sequences(sequences):
+def onehot_encode_sequences(sequences, stack=True):
     ''' Encode each sequence in sequences, without any expansion or truncation '''
+    
     onehot = []
     mapping = {'A': 0, 'C': 1, 'G': 2, 'T': 3, 'U': 3}
     for sequence in sequences:
@@ -431,8 +419,11 @@ def onehot_encode_sequences(sequences):
             else:
                 arr[i,:] = 0.25
         onehot.append(arr.transpose())
-        
-    return np.stack(onehot)
+    
+    if stack:    
+        return np.stack(onehot)
+    
+    return onehot
 
 
 def flank_to_sequence(flank, fasta_handle):
@@ -442,14 +433,29 @@ def flank_to_sequence(flank, fasta_handle):
     chrom = chrom.lstrip("chr")
     fasta_seq = fasta[chrom][int(start):int(end)]
     return fasta_seq.seq
+
+def pad_sequences(encoded_sequence, size=2000):
+    ''' Pad sequences with a special value to extend peaks to a common array size '''
+    
+    assert(len(encoded_sequence.shape) == 2)
+    rows, cols = encoded_sequence.shape
+    
+    if cols < size:
+        padding_cols = size - cols
+        padding = -1. * np.ones((rows, padding_cols))
+        return np.concatenate((encoded_sequence, padding), axis=1)
+    else:
+        start = np.random.randint(0, cols - size) if cols - size > 0 else 0
+        end = start + size
+        return encoded_sequence[:,start:end]        
    
-def resize_sequences(coords, sequence, fasta, size=300):
+def resize_sequences(coords, sequence, fasta, size=2000):
     ''' Resize the sequence at coords, truncating or expanding (from fasta)
     file as required '''
     
     if len(sequence) < size:
         
-        # calculate border of flaking sequence
+        # calculate border of flanking sequence
         coords = coords.split('|')[0]
         chrom, s_e = coords.lstrip('>').split(':')
         start, end = s_e.split('-')
@@ -465,12 +471,12 @@ def resize_sequences(coords, sequence, fasta, size=300):
         resized_sequence = fasta_seq.seq
         
     else:
-        # select random subset, unless we're right on 300bp
+        # select random subset, unless we're right on size bp
         start = np.random.randint(0,len(sequence) - size) if len(sequence) - size > 0 else 0
         end = start + size
         resized_sequence = sequence[start:end]
     
-    assert( len(resized_sequence) == 300)
+    assert( len(resized_sequence) == size)
     return resized_sequence
     
 
@@ -484,5 +490,5 @@ def batch_round(count, batch_size):
 ################################################################################
 if __name__ == '__main__':
     # DEBUG
-    arg_string = "-t 6 -v 19 -b 20 -x N_containing_peaks.txt -r ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Ref.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Alt.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/mapped_reads/CD8_effector/ mouse_asa.h5"
+    arg_string = "-t 6 -v 19 -b 20 -x N_containing_peaks.txt -r ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Ref.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/sequences/CD8_effector/atlas.Alt.fa ~/projects/SeqDemote/data/ATAC/mouse_asa/mapped_reads/CD8_effector/ mouse_asa_2k.h5"
     encode_sequences(arg_string.split())

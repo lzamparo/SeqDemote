@@ -84,12 +84,13 @@ givens = {
 
 
 if hasattr(model_module, 'build_objective'):
-    train_loss = model_module.build_objective(l_in, l_out, t, training_mode=True)
+    deterministic = False
+    train_loss = model_module.build_objective(l_in, l_out, t, deterministic)
 else:
     train_loss = nn.objectives.aggregate(nn.objectives.binary_crossentropy(l_out, t))
 
 all_excluded_params = nn.layers.get_all_params(l_exclude)
-all_params = nn.layers.get_all_params(l_out)
+all_params = nn.layers.get_all_params(l_out, trainable=True)
 all_params = list(set(all_params) - set(all_excluded_params))
 
 

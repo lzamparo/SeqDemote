@@ -5,6 +5,67 @@ from collections import OrderedDict
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 
+### Weak AggMo implementation attempt.   
+def apply_aggregated_threevec_momentum(updates, params=None, velocity_updates=None, momentums=np.array([0.,0.9,0.999])):
+    """Returns a modified update dictionary including aggregated momentum
+    
+    Generates update expressions of the form:
+    * ``velocity_i := momentum_i * velocity_(i-i) + updates[param] - param``
+    * ``param := param + lr*velocity``
+    Parameters
+    ----------
+    updates : OrderedDict
+        A dictionary mapping parameters to update expressions
+    params : iterable of shared variables, optional
+        The variables to apply momentum to. If omitted, will apply
+        momentum to all `updates.keys()`.
+    momentums : numpy array of floats or symbolic scalars, optional
+        The amount of momentum to apply to each velocity vector
+        Higher momentum results in smoothing over more update steps, 
+        and averaging multiple vectors results in more stable convergence
+        (cf. https://arxiv.org/abs/1804.00325)
+        Defaults to np.array([0. 0.9, 0.999])
+    
+    Returns
+    -------
+    OrderedDict
+        A copy of `updates` with momentum updates for all `params`.
+    Notes
+    -----
+    Higher momentum also results in larger update steps. To counter that,
+    you can optionally scale your learning rate by `1 - momentum`.
+    See Also
+    --------
+    momentum : Shortcut applying momentum to SGD updates
+    """
+    if params is None:
+        params = updates.keys()
+    updates = OrderedDict(updates)
+    
+    if velocity_updates is None:
+        velocity_updates = OrderedDict()
+        for param in params:
+            value = param.get_value(borrow=True)
+            velocity_updates[param] = [theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                                 broadcastable=param.broadcastable) for i in range(momentums.shape[0])]
+
+    # calculate update expressions, using velocity_updates to update each velocity vector 
+    # prior to calculating the update for each model parameter
+    for param in params:
+        
+        # calculate each velocity update
+        velocity_updates[param] = [momentum * velocity + updates[param] for momentum, velocity in zip(
+            velocity_updates[param], momentums)]
+        
+        # calculate parameter update
+        #x = m * velocities + updates[param] 
+        K = momentums.shape[0]
+        updates[param] = updates[param] + (1. / K)  * sum(velocity_updates[param])
+
+    
+    return updates, velocity_updates
+
+
 ### Log-loss calculating utils
 
 def one_hot(vec, m=None):

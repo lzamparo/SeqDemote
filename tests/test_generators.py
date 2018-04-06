@@ -150,7 +150,7 @@ def get_heme_training_data(heme_path,peaks_vs_flanks=True):
 def test_create_basset_batch_gen():
     """ Can I build a batch generator? """
     training_data, training_targets = get_basset_training_data(basset_path)
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(range(basset_num_chunks_train), my_gen):
         ok_(x_chunk.shape == chunk_train_shape)
         
@@ -158,14 +158,14 @@ def test_create_basset_batch_gen():
 def test_create_heme_batch_gen():
     """ Can I build a hematopoetic batch generator? """
     training_data, training_targets = get_heme_training_data(heme_path)
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(range(heme_num_chunks_train), my_gen):
         ok_(x_chunk.shape == chunk_train_shape)
 
 def test_create_buffered_heme_batch_gen():
     """ Can i build a buffered batch generator from the hematopoetic data? """
     training_data, training_targets = get_heme_training_data(heme_path)
-    my_buffered_gen = buffering.buffered_gen_threaded(generators.train_sequence_gen(training_data, training_targets))
+    my_buffered_gen = buffering.buffered_gen_threaded(generators.labeled_sequence_gen(training_data, training_targets))
     num_chunks = range(heme_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks, my_buffered_gen):
@@ -178,7 +178,7 @@ def test_create_buffered_heme_batch_gen():
 def test_peaks_vs_flanks_gen():
     """ Does the Hematopoetic data generator return peaks vs flanks output? """
     training_data, training_targets = get_heme_training_data(heme_path)
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(range(heme_num_chunks_train), my_gen):
         ok_(y_chunk.shape == (chunk_size,1))        
 
@@ -188,7 +188,7 @@ def test_exhaust_data():
     training_data, training_targets = get_basset_training_data()
     seen_pts = 0
     num_chunks = range(basset_num_chunks_train)
-    my_gen = generators.train_sequence_gen(training_data, training_targets)
+    my_gen = generators.labeled_sequence_gen(training_data, training_targets)
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
         seen_pts = seen_pts + x_chunk.shape[0]
     print("Saw ", str(seen_pts), " points total")    
@@ -199,7 +199,7 @@ def test_buffered_batch_gen_threaded():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_basset_training_data(basset_path)
-    my_gen = buffering.buffered_gen_threaded(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
+    my_gen = buffering.buffered_gen_threaded(generators.labeled_sequence_gen(training_data, training_targets), buffer_size=3)
     num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
@@ -212,7 +212,7 @@ def test_buffered_batch_gen_mp():
     """ Can I create a buffered batch generator and exhaust the data? """
     
     training_data, training_targets = get_basset_training_data(basset_path)
-    my_gen = buffering.buffered_gen_mp(generators.train_sequence_gen(training_data, training_targets), buffer_size=3)
+    my_gen = buffering.buffered_gen_mp(generators.labeled_sequence_gen(training_data, training_targets), buffer_size=3)
     num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):
@@ -228,7 +228,7 @@ def test_buffered_kmerizing_gen():
     """ Can I create a buffered batch generator that kmerizes the data? """
     
     training_data, training_targets = get_basset_training_data(basset_path)
-    my_gen = buffering.buffered_gen_mp(generators.train_kmerize_gen(training_data, training_targets, kmersize=3), buffer_size=3)
+    my_gen = buffering.buffered_gen_mp(generators.labeled_kmer_sequence_gen(training_data, training_targets, kmersize=3), buffer_size=3)
     num_chunks = range(basset_num_chunks_train)
     seen_pts = 0
     for e, (x_chunk, y_chunk) in zip(num_chunks,my_gen):

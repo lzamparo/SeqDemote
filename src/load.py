@@ -129,28 +129,28 @@ class HematopoeticDataLoader(DataLoader):
     def create_batch_gen(self, chunk_size=4096, num_chunks=58):
         if not hasattr(self, 'train_in'):
             self.load_train()
-        return generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
+        return generators.labeled_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
     
     def create_buffered_gen(self, chunk_size=4096, num_chunks=58):
         if not hasattr(self, 'train_in'):
             self.load_train()
-        gen = generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
+        gen = generators.labeled_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
         return buffering.buffered_gen_threaded(gen)   
     
     def create_valid_gen(self, chunk_size=4096, num_chunks=20):
         if not hasattr(self, 'valid_in'):
             self.load_validation()
             
-        return generators.train_sequence_gen(self.valid_in, self.valid_out, chunk_size, num_chunks)
+        return generators.labeled_sequence_gen(self.valid_in, self.valid_out, chunk_size, num_chunks)
     
     def create_buffered_valid_gen(self, chunk_size=4096, num_chunks=12):
         if not hasattr(self, 'valid_in'):
             self.load_validation()
                     
-        gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
+        gen = generators.labeled_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen) 
 
-class BassetDataLoader(DataLoader):
+class StandardDataLoader(DataLoader):
     
     def __init__(self, **kwargs):
         DataLoader.__init__(self)
@@ -158,11 +158,17 @@ class BassetDataLoader(DataLoader):
         if not hasattr(self, 'data_path'):
             self.data_path = os.path.abspath("../data/DNase/encode_roadmap_all.h5")
         
-    def load_train(self):
+    def load_train(self,train_in_path='/train_in',train_out_path='/train_out'):
+        
         h5file = self.get_h5_handle(self.data_path)
-        train_in = h5file['/train_in']
+        if not hasattr(self, 'train_in_path'):
+            train_in = h5file[train_in_path]
+            train_out = h5file[train_out_path]
+        else:
+            train_in = h5file[self.train_in_path]
+            train_out = h5file[self.train_out_path]
+            
         self.train_set_size = train_in.shape[0]
-        train_out = h5file['/train_out']
         self.train_in = np.zeros(train_in.shape,dtype=train_in.dtype)
         self.train_in[:] = train_in[:]
         
@@ -171,26 +177,36 @@ class BassetDataLoader(DataLoader):
         
         h5file.close()    
         
-    def load_test(self):
+    def load_test(self,test_in_path='/test_in',test_out_path='/test_out'):
+        
         h5file = self.get_h5_handle(self.data_path)
-        test_in = h5file['/test_in']
-        test_out = h5file['test_out']
+        if not hasattr(self, 'test_in_path'):
+            test_in = h5file[test_in_path]
+            test_out = h5file[test_out_path]
+        else:
+            test_in = h5file[self.test_in_path]
+            test_out = h5file[self.test_out_path]
     
         self.test_in = np.zeros(test_in.shape, dtype=test_in.dtype)
         self.test_in[:] = test_in[:]
-    
+        
         self.test_out = np.zeros(test_out.shape, dtype=test_out.dtype)
         self.test_out[:] = test_out[:]
         h5file.close()  
         
-    def load_validation(self):
+    def load_validation(self,valid_in_path='/valid_in', valid_out_path='/valid_out'):
         h5file = self.get_h5_handle(self.data_path)
-        valid_in = h5file['/valid_in']
-        valid_out = h5file['valid_out']
+        if not hasattr(self, 'valid_in_path'):
+            valid_in = h5file[valid_in_path]
+            valid_out = h5file[valid_out_path]
+        else:
+            valid_in = h5file[self.valid_in_path]
+            valid_out = h5file[self.valid_out_path]
+            
         self.valid_set_size = valid_in.shape[0]
-    
         self.valid_in = np.zeros(valid_in.shape, dtype=valid_in.dtype)
         self.valid_in[:] = valid_in[:]
+        
         self.valid_out = np.zeros(valid_out.shape, dtype=valid_out.dtype)
         self.valid_out[:] = valid_out[:]
         h5file.close()        
@@ -207,12 +223,12 @@ class BassetDataLoader(DataLoader):
         else:
             my_num_chunks = num_chunks
     
-        return generators.train_sequence_gen(self.train_in, self.train_out, my_chunk_size, my_num_chunks)
+        return generators.labeled_sequence_gen(self.train_in, self.train_out, my_chunk_size, my_num_chunks)
     
     def create_buffered_gen(self, chunk_size=4096, num_chunks=458):
         if not hasattr(self, 'train_in'):
             self.load_train()
-        gen = generators.train_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
+        gen = generators.labeled_sequence_gen(self.train_in, self.train_out, chunk_size, num_chunks)
         return buffering.buffered_gen_threaded(gen)    
             
     def create_valid_gen(self, chunk_size=4096, num_chunks=17):
@@ -227,19 +243,19 @@ class BassetDataLoader(DataLoader):
         else:
             my_num_chunks = num_chunks        
             
-        return generators.train_sequence_gen(self.valid_in, self.valid_out, my_chunk_size, my_num_chunks)
+        return generators.labeled_sequence_gen(self.valid_in, self.valid_out, my_chunk_size, my_num_chunks)
          
     def create_buffered_valid_gen(self, chunk_size, num_chunks):
         if not hasattr(self, 'valid_in'):
             self.load_validation()
                     
-        gen = generators.train_sequence_gen(self.valid_in, self.valid_out)
+        gen = generators.labeled_sequence_gen(self.valid_in, self.valid_out)
         return buffering.buffered_gen_threaded(gen)    
         
 
 
 
-class KmerDataLoader(BassetDataLoader):
+class KmerDataLoader(StandardDataLoader):
     
     def __init__(self, **kwargs):
         DataLoader.__init__(self)
@@ -261,7 +277,7 @@ class KmerDataLoader(BassetDataLoader):
         else:
             my_num_chunks = num_chunks
             
-        return generators.train_kmerize_gen(self.train_in, self.train_out, 
+        return generators.labeled_kmer_sequence_gen(self.train_in, self.train_out, 
                                             self.kmer_length, my_chunk_size, my_num_chunks)
     
     def create_mismatch_batch_gen(self, chunk_size=4096, num_chunks=458):
@@ -276,7 +292,7 @@ class KmerDataLoader(BassetDataLoader):
         else:
             my_num_chunks = num_chunks
             
-        return generators.train_kmerize_gen_mismatch(self.train_in, self.train_out, 
+        return generators.labeled_kmer_sequence_mismatch_gen(self.train_in, self.train_out, 
                                             self.kmer_length, my_chunk_size, my_num_chunks)            
     
     def create_valid_gen(self, chunk_size=4096, num_chunks=17):
@@ -291,7 +307,7 @@ class KmerDataLoader(BassetDataLoader):
         else:
             my_num_chunks = num_chunks
             
-        return generators.train_kmerize_gen(self.valid_in, self.valid_out, 
+        return generators.labeled_kmer_sequence_gen(self.valid_in, self.valid_out, 
                                             self.kmer_length, my_chunk_size, my_num_chunks)
     
     def create_mismatch_valid_gen(self, chunk_size=4096, num_chunks=17):
@@ -306,7 +322,7 @@ class KmerDataLoader(BassetDataLoader):
         else:
             my_num_chunks = num_chunks
             
-        return generators.train_kmerize_gen_mismatch(self.valid_in, self.valid_out, 
+        return generators.labeled_kmer_sequence_mismatch_gen(self.valid_in, self.valid_out, 
                                             self.kmer_length, my_chunk_size, my_num_chunks)            
 
 
