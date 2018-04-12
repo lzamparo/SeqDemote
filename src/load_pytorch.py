@@ -5,8 +5,8 @@ import numpy as np
 
 
 class ATAC_Train_Dataset(Dataset):
-    """ Load the training data set.  multiple workers need to use
-    forked processes, so stateful stuff from the input is not passed on (maybe)"""
+    """ Load the training data set.  Multiple workers need to use
+    forked processes, so stateful stuff from the input is not passed on (maybe??)"""
 
     def __init__(self, h5_filepath, transform=None):
     
@@ -78,7 +78,53 @@ class ATAC_Valid_Dataset(Dataset):
     
     def close(self):
         self.h5f.close()         
+
+
+class DNase_Train_Dataset(Dataset):
+    
+    def __init__(self, h5_filepath, transform=None):
         
+        self.h5f = h5py.File(h5_filepath, 'r')
+        self.num_entries = self.h5f['/train_in'].shape[0]
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        
+        features = self.h5f['/train_in'][index]
+        label = self.h5f['/train_out'][index]
+        if self.transform is not None:
+            features = self.transfor(features)
+        return features, label
+    
+    def __len__(self):
+        return self.num_entries
+    
+    def close(self):
+        self.h5f.close()
+        
+class DNase_Valid_Dataset(Dataset):
+    
+    def __init__(self, h5_filepath, transform=None):
+        
+        self.h5f = h5py.File(h5_filepath, 'r')
+        self.num_entries = self.h5f['/valid_in'].shape[0]
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        
+        features = self.h5f['/valid_in'][index]
+        label = self.h5f['/valid_out'][index]
+        if self.transform is not None:
+            features = self.transfor(features)
+        return features, label
+    
+    def __len__(self):
+        return self.num_entries
+    
+    def close(self):
+        self.h5f.close()
+        
+
         
 class SubsequenceTransformer(object):
     """ extract and sub-sample a sequence of given length after
@@ -94,7 +140,8 @@ class SubsequenceTransformer(object):
         bases, _, cols = sequence.shape
         start = np.random.randint(0, cols - self.output_size) if cols - self.output_size > 0 else 0
         end = start + self.output_size
-        return sequence[:,:,start:end]         
+        subseq = sequence[:,:,start:end]
+        return subseq        
         
     
     def __call__(self, sequence):
@@ -103,7 +150,7 @@ class SubsequenceTransformer(object):
         assert(sequence.shape[-1] >= self.output_size)
         
         # trim the padding from peaks if there is any
-        if np.size(np.where(sequence == -1)) > 0:
+        if -1.0 in sequence:
             pad_start = np.argmin(sequence)
             return self.get_subsequence(sequence[:,:,0:pad_start])
         else:

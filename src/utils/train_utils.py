@@ -198,3 +198,15 @@ def accuracy_topn(y, t, n=5):
 def find_project_root():
     return os.path.expanduser("~/projects/SeqDemote/")
 
+
+def count_params(param_list):
+    ''' count the total number of parameters i
+    in a list of of torch Tensors'''
+    num_params = 0
+    for tensor in param_list:
+        size = tensor.size()
+        cumulative_product = 1
+        for dimension in size:
+            cumulative_product *= dimension
+        num_params += cumulative_product
+    return num_params    

@@ -20,13 +20,13 @@ from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer
 /labels/valid_out        Dataset {6818, 5}
 '''
 
-path = os.path.join(find_project_root(), "data", "ATAC", "mouse_asa", "mouse_asa.h5")
-valid_examples = 6818
+path = os.path.join(find_project_root(), "data", "ATAC", "mouse_asa", "mouse_asa_2k.h5")
+valid_examples = 6362
 batch_size = 128
 subsequence_size = 200
 num_batches = valid_examples // batch_size
 
-def setup_dataset_and_loader(transform=False):
+def setup_dataset_and_loader(transform=False, workers=1):
     if transform:
         transformer = SubsequenceTransformer(subsequence_size)
         valid_dataset = ATAC_Valid_Dataset(path,transform=transformer)
@@ -36,7 +36,7 @@ def setup_dataset_and_loader(transform=False):
     valid_loader = DataLoader(valid_dataset,
                               batch_size=batch_size,
                               shuffle=True,
-                              num_workers=2)
+                              num_workers=workers)
     return valid_dataset, valid_loader
 
 
@@ -50,6 +50,44 @@ def test_build_data_loader():
     eq_(valid_len, valid_examples)
 
 
+def test_transformer_only():
+    """ Transformer seems to be acting up occasionally, why? """
+    valid_dataset, valid_loader = setup_dataset_and_loader()
+    transformer = SubsequenceTransformer(subsequence_size)
+    
+    torch.manual_seed(0)
+    data_seen = 0
+    lower_bound = batch_size * (num_batches - 1)
+    for batch_idx, (x, y) in enumerate(valid_loader):
+        
+        for seq in x:
+            try:
+                x_trans = transformer(seq)
+                ok_(x_trans.size()[-1] == subsequence_size)
+            except:
+                print("Encountered a transformer error for: ", seq)
+                
+        data_seen += x.size()[0]
+    print("lower bound, ", lower_bound, " data_seen, ", data_seen, " valid_examples ", valid_examples)            
+    ok_(lower_bound <= data_seen <= valid_examples)
+    valid_dataset.close()
+            
+
+def test_lengths():
+    """ Something funny going on with sequence lengths """
+    
+    valid_dataset, valid_loader = setup_dataset_and_loader()
+    
+    for batch_idx, (x, y) in enumerate(valid_loader):
+        for seq in x:
+            ok_(seq.shape[-1] > 0)
+            ok_(seq.shape[-1] >= 200)
+            
+    valid_dataset.close()
+            
+        
+    
+
 def test_transform_data_loader():
     """ Make sure the dataset has the correct 
     transformed lengths """
@@ -58,7 +96,7 @@ def test_transform_data_loader():
 
     torch.manual_seed(0)
     data_seen = 0
-    lower_bound = 128 * (num_batches - 1)
+    lower_bound = batch_size * (num_batches - 1)
 
     for batch_idx, (x, y) in enumerate(valid_loader):
 
@@ -66,7 +104,8 @@ def test_transform_data_loader():
         ok_(x.size()[-1] == subsequence_size)
         data_seen += x.size()[0]
             
-    ok_(lower_bound <= data_seen <= valid_examples)     
+    ok_(lower_bound <= data_seen <= valid_examples)
+    valid_dataset.close()
     
     
 def test_iterate_data_loader():
@@ -94,7 +133,9 @@ def test_iterate_data_loader():
                 print(' | Batch index:', batch_idx, end='')
                 print(' | Batch size:', y.size()[0])
                 
-        ok_(lower_bound <= data_seen <= valid_examples)    
+        ok_(lower_bound <= data_seen <= valid_examples) 
+        
+    valid_dataset.close()
 
     
 
