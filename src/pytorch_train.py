@@ -153,6 +153,7 @@ prev_time = start_time
 for epoch in range(num_epochs):
     
     losses = []
+    epoch_start_time = time.time()
     for batch_idx, (x, y) in enumerate(train_loader):
         
         x, y = data_cast(x), label_cast(y) # needs to be float if regression, long if CrossEntropy
