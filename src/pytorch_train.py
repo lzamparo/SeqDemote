@@ -181,20 +181,26 @@ for epoch in range(num_epochs):
 
     epoch_end_time = time.time()
     losses_train.append(losses)
-    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(epoch_train_loss))) ### dump these to a text file somewhere else...
+    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(np.array(losses)))) 
     print("Training for epoch ", epoch, " took ", epoch_end_time - epoch_start_time, "s", flush=True)
     
     ### Do we validate?
     if ((epoch + 1) % model_module.validate_every) == 0:
         print("Validating...")
-        
+        losses = []
         for batch_idx, (x, y) in enumerate(valid_loader):
             
             x, y = data_cast(x), data_cast(y)
+            if cuda:
+                x, y = x.cuda(async=True), y.cuda(async=True)            
             y_pred = model(x)
             
             loss = valid_loss(y_pred, y)
-            print("validation batch ", batch_idx, " : ", )
+            print("validation batch ", batch_idx, " : ", loss.data)
+            losses.append(loss.data)   
+            
+        losses_valid_log.append(losses)
+        print("Mean validation loss:\t\t {0:.6f}."format(np.mean(np.array(losses))))
             
          
 # tidy up datasets
