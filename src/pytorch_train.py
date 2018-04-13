@@ -136,11 +136,14 @@ else:
 
 print("...Checking to see if CUDA  is required")
 if hasattr(model_module, 'cuda'):
-    import torch.cuda
     cuda = model_module.cuda and torch.cuda.is_available()
-    model.cuda()
 else:
     cuda = False
+    
+if cuda:
+    if model_module.cuda and torch.cuda.is_available():
+        import torch.cuda
+        model.cuda()
    
 print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
@@ -200,7 +203,7 @@ for epoch in range(num_epochs):
             losses.append(loss.data)   
             
         losses_valid_log.append(losses)
-        print("Mean validation loss:\t\t {0:.6f}."format(np.mean(np.array(losses))))
+        print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
             
          
 # tidy up datasets
