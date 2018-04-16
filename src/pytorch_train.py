@@ -227,7 +227,6 @@ for epoch in range(num_epochs):
                 'losses_valid_xent': losses_valid_log,
                 'losses_valid_auc': losses_valid_auroc,
                 'losses_valid_aupr': losses_valid_aupr,
-                'time_since_start': time_since_start,
                 'param_values': model.parameters()
             }
             pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)        
