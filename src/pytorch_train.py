@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import pickle
 
 import numpy as np
 
@@ -94,7 +95,7 @@ optim.zero_grad()
 print("...setting up logging for losses ")
 losses_train = []
 losses_valid_log = []
-losses_valid_auc = []
+losses_valid_auroc = []
 losses_valid_aupr = []
     
 print("...Loading the data", flush=True)
@@ -191,9 +192,11 @@ for epoch in range(num_epochs):
     ### Do we validate?
     if ((epoch + 1) % model_module.validate_every) == 0:
         print("Validating...")
+        valid_outputs = []
+        valid_labels = []
         losses = []
         for batch_idx, (x, y) in enumerate(valid_loader):
-            
+            valid_labels.append(y.data.numpy())
             x, y = data_cast(x), data_cast(y)
             if cuda:
                 x, y = x.cuda(async=True), y.cuda(async=True)            
@@ -201,12 +204,35 @@ for epoch in range(num_epochs):
             
             loss = valid_loss(y_pred, y)
             print("validation batch ", batch_idx, " : ", loss.data)
-            losses.append(loss.data)   
+            losses.append(loss.data)
+            valid_outputs.append(y_pred.data.numpy())
+            
             
         losses_valid_log.append(losses)
         print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-            
-         
+        aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+        auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
+        print("    validation roc:\t {0:.2f}.".format(auroc * 100))
+        print("    validation aupr:\t {0:.2f}.".format(aupr * 100))
+        losses_valid_aupr.append(aupr)
+        losses_valid_auroc.append(auroc)
+        
+        # dump to pickle
+        print("Saving metadata, parameters")
+        with open(metadata_tmp_path, 'wb') as f:
+            save_dict = {
+                'configuration': model_config,
+                'experiment_id': expid,
+                'losses_train': losses_train,
+                'losses_valid_xent': losses_valid_log,
+                'losses_valid_auc': losses_valid_auroc,
+                'losses_valid_aupr': losses_valid_aupr,
+                'time_since_start': time_since_start,
+                'param_values': model.parameters()
+            }
+            pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)        
+        
 # tidy up datasets
 train_dataset.close()
 valid_dataset.close()
+

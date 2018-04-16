@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from load_pytorch import DNase_Train_Dataset, DNase_Valid_Dataset
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap.h5")
+save_dir = "basset_repro_pytorch"
 
 batch_size = 128
 momentum = 0.98
