@@ -15,7 +15,6 @@ from load_pytorch import SubsequenceTransformer
 from utils import accounting, train_utils
 
 import importlib.util
-import pickle
 from datetime import datetime, timedelta
 import string
 
@@ -196,7 +195,7 @@ for epoch in range(num_epochs):
         valid_labels = []
         losses = []
         for batch_idx, (x, y) in enumerate(valid_loader):
-            valid_labels.append(y.data.numpy())
+            valid_labels.append(y.numpy())
             x, y = data_cast(x), data_cast(y)
             if cuda:
                 x, y = x.cuda(async=True), y.cuda(async=True)            
