@@ -204,6 +204,8 @@ for epoch in range(num_epochs):
             loss = valid_loss(y_pred, y)
             print("validation batch ", batch_idx, " : ", loss.data)
             losses.append(loss.data)
+            if cuda:
+                y_pred = y_pred.cpu()
             valid_outputs.append(y_pred.data.numpy())
             
             
