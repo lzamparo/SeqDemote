@@ -152,6 +152,7 @@ prev_time = start_time
 
 for epoch in range(num_epochs):
     
+    print("Starting training for epoch ", epoch)
     losses = []
     epoch_start_time = time.time()
     for batch_idx, (x, y) in enumerate(train_loader):
