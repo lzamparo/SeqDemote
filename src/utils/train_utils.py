@@ -97,7 +97,7 @@ def log_loss(y, t, eps=1e-15):
     losses = log_losses(y, t, eps)
     return np.mean(losses)
 
-def st_accuracy(y_hat, y):
+def st_accuracy(y, y_hat):
     """ single-task (peak vs flank) ROC ;
     y_hat := predicted labels
     y := actual labels from data """
@@ -106,7 +106,7 @@ def st_accuracy(y_hat, y):
         return -1
     return roc_auc_score(y, y_hat)
 
-def mt_accuracy(y_hat, y):
+def mt_accuracy(y, y_hat):
     """ 
     multi-task ROC: the un-weighted average of task ROC scores; 
     y_hat := predicted labels
@@ -116,12 +116,12 @@ def mt_accuracy(y_hat, y):
         print("Error in AUC: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
         return -1
     rocs = []
-    for preds, targets in zip(y_hat.transpose(), y.transpose()):
+    for targets, preds in zip(y.transpose(), y_hat.transpose()):
         rocs.append(roc_auc_score(targets, preds))
     
     return np.mean(rocs)
 
-def mt_precision(y_hat, y):
+def mt_precision(y, y_hat):
     """
     multi-task precision: the un-weighted average of task precision scores;
     y_hat := predicted labels
@@ -131,7 +131,7 @@ def mt_precision(y_hat, y):
         print("Error in precision: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
         return -1
     precisions = []
-    for preds, targets in zip(y_hat.transpose(), y.transpose()):
+    for targets, preds in zip(y.transpose(), y_hat.transpose()):
         precisions.append(average_precision_score(targets, preds))
     
     return np.mean(precisions)
