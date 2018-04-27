@@ -163,7 +163,7 @@ for epoch in range(num_epochs):
         y_pred = model(x)
         
         loss = training_loss(y_pred, y)
-        print(batch_idx, loss.data[0])
+        print(batch_idx, loss.item())
         
         # Before the backward pass, use the optimizer object to zero all of the
         # gradients for the variables it will update (which are the learnable
@@ -178,7 +178,7 @@ for epoch in range(num_epochs):
         
         # Clip gradient if specified in model file
         if hasattr(model_module, "clipping"):
-            nn.utils.clip_grad_norm(model.parameters(), model_module.clipping)
+            nn.utils.clip_grad_norm_(model.parameters(), model_module.clipping)
         
         optim.step()           
         losses.append(loss.data)
@@ -212,8 +212,8 @@ for epoch in range(num_epochs):
             
         losses_valid_log.append(losses)
         print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-        aupr = train_utils.mt_precision(np.vstack(valid_outputs), np.vstack(valid_labels))
-        auroc = train_utils.mt_accuracy(np.vstack(valid_outputs), np.vstack(valid_labels))
+        aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+        auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
         print("    validation roc:\t {0:.2f}.".format(auroc * 100))
         print("    validation aupr:\t {0:.2f}.".format(aupr * 100))
         losses_valid_aupr.append(aupr)
