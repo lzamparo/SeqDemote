@@ -38,8 +38,10 @@ expid = expid.split('/')[-1]
 
 if hasattr(model_module, 'save_dir') and os.path.exists(os.path.join(train_utils.find_project_root(), 'results')):
     metadata_tmp_path = os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir, expid + ".pkl")
+    model_save_path = os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir, expid + ".ptm")
 else:
     metadata_tmp_path = os.path.join(train_utils.find_project_root(), 'results', expid + ".pkl")
+    model_save_path = os.path.join(train_utils.find_project_root(), 'results', expid + ".ptm")
     
 print("Experiment ID: ", expid)
 
@@ -219,8 +221,10 @@ for epoch in range(num_epochs):
         losses_valid_aupr.append(aupr)
         losses_valid_auroc.append(auroc)
         
-        # dump to pickle
+        # dump model file, book-keeping lists to pickle
         print("Saving metadata, parameters")
+        torch.save(model.state_dict(), model_save_path)
+        
         with open(metadata_tmp_path, 'wb') as f:
             save_dict = {
                 'configuration': model_config,
@@ -228,8 +232,7 @@ for epoch in range(num_epochs):
                 'losses_train': losses_train,
                 'losses_valid_xent': losses_valid_log,
                 'losses_valid_auc': losses_valid_auroc,
-                'losses_valid_aupr': losses_valid_aupr,
-                'param_values': model.parameters()
+                'losses_valid_aupr': losses_valid_aupr
             }
             pickle.dump(save_dict, f, pickle.HIGHEST_PROTOCOL)        
         
