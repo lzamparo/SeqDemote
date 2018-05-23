@@ -59,6 +59,7 @@ class BassetRepro(nn.Module):
         
         self.out_layer = nn.Linear(1000,164)
         
+        
     def forward(self, input):
         
         x = self.pool1(F.relu(self.bn1(self.conv1(input))))
@@ -74,7 +75,7 @@ class BassetRepro(nn.Module):
         
         x = self.drop2(self.bn5(self.fc2(x)))
         
-        return self.out_layer(x)
+        return nn.Sigmoid(self.out_layer(x))
         
     
     # helper function to calculate number of units to expect for 
