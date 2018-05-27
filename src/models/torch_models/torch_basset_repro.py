@@ -16,15 +16,15 @@ clipping = 7
 cuda = True
 
 learning_rate_schedule = {
-0: 0.01,
+0: 0.002,
 10: 0.001,
 20: 0.0001}
 
 validate_every = 2
 save_every = 5
 
-train_loss = nn.BCEWithLogitsLoss()
-valid_loss = nn.BCEWithLogitsLoss()
+train_loss = nn.BCELoss()
+valid_loss = nn.BCELoss()
 train_dataset = DNase_Train_Dataset(data_path, transform=None)
 valid_dataset = DNase_Valid_Dataset(data_path, transform=None)
 data_cast = lambda x: torch.autograd.Variable(x).float()
