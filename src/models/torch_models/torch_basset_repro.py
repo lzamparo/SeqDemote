@@ -16,12 +16,12 @@ clipping = 7
 cuda = True
 
 learning_rate_schedule = {
-0: 0.002,
-10: 0.001,
+0: 0.003,
+10: 0.002,
 20: 0.0001}
 
-validate_every = 2
-save_every = 5
+validate_every = 1
+save_every = 1
 
 train_loss = nn.BCELoss()
 valid_loss = nn.BCELoss()

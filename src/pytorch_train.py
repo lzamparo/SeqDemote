@@ -155,8 +155,10 @@ prev_time = start_time
 for epoch in range(num_epochs):
     
     print("Starting training for epoch ", epoch)
+    model.train()  # set model to training, if not already.
     losses = []
     epoch_start_time = time.time()
+    total_batches = len(train_loader)
     for batch_idx, (x, y) in enumerate(train_loader):
         
         x, y = data_cast(x), label_cast(y) # needs to be float if regression, long if CrossEntropy
@@ -165,17 +167,15 @@ for epoch in range(num_epochs):
         y_pred = model(x)
         
         loss = training_loss(y_pred, y)
-        print(batch_idx, loss.item())
         
-        # Before the backward pass, use the optimizer object to zero all of the
-        # gradients for the variables it will update (which are the learnable
-        # weights of the model). This is because by default, gradients are
-        # accumulated in buffers( i.e, not overwritten) whenever .backward()
-        # is called. Checkout docs of torch.autograd.backward for more details.
+        if (batch_idx + 1) % 100 == 0:
+            print('Epoch [{}/{}], batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, 
+                                                                      num_epochs, 
+                                                                      batch_idx+1, 
+                                                                      total_batches, 
+                                                                      loss.item()))
+        
         optim.zero_grad()
-        
-        # Backward pass: compute gradient of the loss with respect to model
-        # parameters
         loss.backward()
         
         # Clip gradient if specified in model file
@@ -197,6 +197,9 @@ for epoch in range(num_epochs):
         valid_outputs = []
         valid_labels = []
         losses = []
+        
+        model.eval()  # set model to evaluation mode: turn off dropout
+        
         for batch_idx, (x, y) in enumerate(valid_loader):
             valid_labels.append(y.numpy())
             x, y = data_cast(x), data_cast(y)
@@ -216,8 +219,8 @@ for epoch in range(num_epochs):
         print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
         aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
         auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
-        print("    validation roc:\t {0:.2f}.".format(auroc * 100))
-        print("    validation aupr:\t {0:.2f}.".format(aupr * 100))
+        print("    validation roc:\t {0:.4f}.".format(auroc * 100))
+        print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
         losses_valid_aupr.append(aupr)
         losses_valid_auroc.append(auroc)
         
