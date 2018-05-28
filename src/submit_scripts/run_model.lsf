@@ -3,8 +3,8 @@
 #BSUB -q gpuqueue 
 #BSUB -gpu "num=1"
 #BSUB -n 2
-#BSUB -R "rusage[mem=8] span[ptile=2]"
-#BSUB -W 12:00
+#BSUB -R "rusage[mem=4] span[ptile=2]"
+#BSUB -W 23:00
 #BSUB -o %J.stdout
 #BSUB -eo %J.stderr
 
