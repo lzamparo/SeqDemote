@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,6 +9,7 @@ from torch.nn.modules.utils import _pair
 
 class Conv2dUntiedBias(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, input_len, stride=1, padding=0, dilation=1, groups=1):
+        super(Conv2dUntiedBias, self).__init__()
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -24,12 +26,12 @@ class Conv2dUntiedBias(nn.Module):
         self.padding = padding
         self.dilation = dilation
         self.groups = groups
-        self.weight = Parameter(torch.Tensor(
+        self.weight = nn.Parameter(torch.Tensor(
                 out_channels, in_channels // groups, *kernel_size))
         
         height = 1
-        width = self.calc_output_width(input_length, kernel_size, stride)
-        self.bias = Parameter(torch.Tensor(out_channels, height, width))
+        width = self.calc_output_width(input_len, kernel_size)
+        self.bias = nn.Parameter(torch.Tensor(out_channels, height, width))
         self.reset_parameters()
 
     def calc_output_width(self, input_length, kernel_size, stride=1):
@@ -48,6 +50,7 @@ class Conv2dUntiedBias(nn.Module):
                         self.padding, self.dilation, self.groups)
         # add untied bias
         output += self.bias.unsqueeze(0).repeat(input.size(0), 1, 1, 1)
+        return output
         
 
 from load_pytorch import DNase_Train_Dataset, DNase_Valid_Dataset
@@ -81,21 +84,21 @@ class BassetRepro(nn.Module):
     def __init__(self, input_size=(4,1,600)):
         
         super(BassetRepro, self).__init__()
-        self.conv1 = Conv2dUntiedBias(4, 300, kernel_size=(1,19), input_size[-1])
+        self.conv1 = Conv2dUntiedBias(4, 300, (1,19), input_size[-1])
         self.bn1 = nn.BatchNorm2d(300)
         self.pool1 = nn.MaxPool2d(kernel_size=(1,3), stride=(1,3))
         
         output_width = self.conv1.calc_output_width(input_size[-1],kernel_size=(1,19))
         input_width = output_width // 3
         
-        self.conv2 = nn.Conv2dUntiedBias(300, 200, kernel_size=(1,11), input_width)
+        self.conv2 = Conv2dUntiedBias(300, 200, (1,11), input_width)
         self.bn2 = nn.BatchNorm2d(200)
         self.pool2 = nn.MaxPool2d(kernel_size=(1,4), stride=(1,4))
         
         output_width = self.conv2.calc_output_width(input_width,kernel_size=(1,11))
         input_width = output_width // 4
         
-        self.conv3 = nn.Conv2dUntiedBias(200, 200, kernel_size=(1,7), input_width)
+        self.conv3 = Conv2dUntiedBias(200, 200, (1,7), input_width)
         self.bn3 = nn.BatchNorm2d(200)
         self.pool3 = nn.MaxPool2d(kernel_size=(1,4), stride=(1,4))
         
