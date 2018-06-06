@@ -71,7 +71,7 @@ if hasattr(model_module, 'momentum'):
     momentum = model_module.momentum
     
 else:
-    momentum = 0.9
+    momentum = None
     
 print("...Checking to see if CUDA  is required")
 if hasattr(model_module, 'cuda'):
@@ -85,10 +85,10 @@ if cuda:
     
 if hasattr(model_module, 'optimizer'):
     weights, biases = model_module.weights, model_module.biases
-    optim = model_module.optimizer([
-    {'params': weights, 'weight_decay': 5e-3},
-                {'params': biases, 'weight_decay': 5e-3}
-                ], lr=learning_rate_schedule[0], momentum=momentum)
+    opd_list = model_module.optimizer_param_dicts
+    optimizer_kwargs = model_module.optimizer_kwargs
+    
+    optim = model_module.optimizer(opd_list, **optimizer_kwargs)
 else:
     weights, biases = [], []
     for name, p in model.named_parameters():

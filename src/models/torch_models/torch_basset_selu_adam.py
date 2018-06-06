@@ -59,12 +59,12 @@ data_path = os.path.expanduser("~/projects/SeqDemote/data/DNase/encode_roadmap.h
 save_dir = "basset_repro_pytorch"
 
 batch_size = 128
-momentum = 0.98
+momentum = None
 clipping = 7
 cuda = True
 
 learning_rate_schedule = {
-0: 0.003,
+0: 0.005,
 10: 0.002,
 20: 0.0001}
 
@@ -186,5 +186,10 @@ for name, p in net.named_parameters():
         weights += [p]
   
   
-# Initialize the params        
+# Initialize the params, put together the arguments for the optimizer        
 optimizer = torch.optim.Adam
+optimizer_param_dicts = [
+        {'params': weights, 'weight_decay': 5e-3},
+                    {'params': biases, 'weight_decay': 5e-3}
+                    ]
+optimizer_kwargs = {'lr': learning_rate_schedule[0]}

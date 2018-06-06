@@ -188,3 +188,8 @@ for name, p in net.named_parameters():
   
 # Initialize the params        
 optimizer = torch.optim.RMSprop
+optimizer_param_dicts = [
+    {'params': weights, 'weight_decay': 5e-3},
+        {'params': biases, 'weight_decay': 5e-3}
+]
+optimizer_kwargs = {'lr': learning_rate_schedule[0], 'momentum': momentum}
