@@ -73,11 +73,21 @@ if hasattr(model_module, 'momentum'):
 else:
     momentum = 0.9
     
+print("...Checking to see if CUDA  is required")
+if hasattr(model_module, 'cuda'):
+    cuda = model_module.cuda and torch.cuda.is_available()
+else:
+    cuda = False
+    
+if cuda:
+    import torch.cuda
+    model.cuda()    
+    
 if hasattr(model_module, 'optimizer'):
     weights, biases = model_module.weights, model_module.biases
     optim = model_module.optimizer([
-    {'params': weights, 'weight_decay': 5e-4},
-                {'params': biases, 'weight_decay': 5e-4}
+    {'params': weights, 'weight_decay': 5e-3},
+                {'params': biases, 'weight_decay': 5e-3}
                 ], lr=learning_rate_schedule[0], momentum=momentum)
 else:
     weights, biases = [], []
@@ -135,17 +145,6 @@ if hasattr(model_module, 'num_epochs'):
     num_epochs = model_module.num_epochs
 else:
     num_epochs = 20
-
-print("...Checking to see if CUDA  is required")
-if hasattr(model_module, 'cuda'):
-    cuda = model_module.cuda and torch.cuda.is_available()
-else:
-    cuda = False
-    
-if cuda:
-    if model_module.cuda and torch.cuda.is_available():
-        import torch.cuda
-        model.cuda()
    
 print("...Training model for ", num_epochs, " epochs (less early stopping)")
 start_time = time.time()
