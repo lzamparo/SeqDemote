@@ -84,6 +84,8 @@ class BassetRepro(nn.Module):
     def __init__(self, input_size=(4,1,600)):
         
         super(BassetRepro, self).__init__()
+        self.relu = nn.ReLU()
+        
         self.conv1 = Conv2dUntiedBias(4, 300, (1,19), input_size[-1])
         self.bn1 = nn.BatchNorm2d(300)
         self.pool1 = nn.MaxPool2d(kernel_size=(1,3), stride=(1,3))
@@ -121,18 +123,18 @@ class BassetRepro(nn.Module):
         
     def forward(self, input):
         
-        x = self.pool1(F.relu(self.bn1(self.conv1(input))))
+        x = self.pool1(self.relu(self.bn1(self.conv1(input))))
         
-        x = self.pool2(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool2(self.relu(self.bn2(self.conv2(x))))
         
-        x = self.pool3(F.relu(self.bn3(self.conv3(x))))
+        x = self.pool3(self.relu(self.bn3(self.conv3(x))))
         
         # flatten layer
         x = x.view(x.size(0), -1)
         
-        x = self.drop1(self.bn4(self.fc1(x)))
+        x = self.drop1(self.relu(self.bn4(self.fc1(x))))
         
-        x = self.drop2(self.bn5(self.fc2(x)))
+        x = self.drop2(self.relu(self.bn5(self.fc2(x))))
         
         x = self.fc3(x)
         

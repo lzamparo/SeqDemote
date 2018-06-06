@@ -76,8 +76,8 @@ else:
 if hasattr(model_module, 'optimizer'):
     weights, biases = model_module.weights, model_module.biases
     optim = model_module.optimizer([
-    {'params': weights, 'weight_decay': 1e-4},
-                {'params': biases, 'weight_decay': 0}
+    {'params': weights, 'weight_decay': 5e-4},
+                {'params': biases, 'weight_decay': 5e-4}
                 ], lr=learning_rate_schedule[0], momentum=momentum)
 else:
     weights, biases = [], []
@@ -208,7 +208,8 @@ for epoch in range(num_epochs):
             y_pred = model(x)
             
             loss = valid_loss(y_pred, y)
-            print("validation batch ", batch_idx, " : ", loss.data)
+            if (batch_idx + 1) % 50 == 0:
+                print("validation batch ", batch_idx, " : ", loss.data)
             losses.append(loss.data)
             if cuda:
                 y_pred = y_pred.cpu()
