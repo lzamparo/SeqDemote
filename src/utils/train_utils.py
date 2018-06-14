@@ -66,6 +66,16 @@ def apply_aggregated_threevec_momentum(updates, params=None, velocity_updates=No
     return updates, velocity_updates
 
 
+def per_task_loss(y_hat, y, loss, do_sum=True):
+    ''' Calculate the per-task loss.  Shape of y, y_hat assumed 
+    to be like (samples, tasks) '''
+    
+    all_task_losses = [loss(y_hat[:,c], y[:,c]) for c in range(y_hat.shape[1])]
+    if do_sum:
+        return sum(all_task_losses)
+    else:
+        return all_task_losses
+
 ### Log-loss calculating utils
 
 def one_hot(vec, m=None):

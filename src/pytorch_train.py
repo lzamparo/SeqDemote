@@ -58,8 +58,8 @@ if hasattr(model_module, "train_loss"):
     valid_loss = model_module.valid_loss
 else:
     training_loss = torch.nn.PoissonNLLLoss()
-    valid_loss = torch.nn.PoissonNLLLoss()  # Need to figure out how to turn off Dropout in validation
-
+    valid_loss = torch.nn.PoissonNLLLoss()  
+    
 print("...setting the learning rate schedule ")
 if hasattr(model_module, 'learning_rate_schedule'):
     learning_rate_schedule = model_module.learning_rate_schedule
@@ -165,7 +165,7 @@ for epoch in range(num_epochs):
             x, y = x.cuda(async=True), y.cuda(async=True)
         y_pred = model(x)
         
-        loss = training_loss(y_pred, y)
+        loss = train_utils.per_task_loss(y_pred, y, training_loss)
         
         if (batch_idx + 1) % 100 == 0:
             print('Epoch [{}/{}], batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, 

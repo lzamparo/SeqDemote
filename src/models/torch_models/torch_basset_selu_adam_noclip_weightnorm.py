@@ -70,8 +70,8 @@ learning_rate_schedule = {
 validate_every = 1
 save_every = 1
 
-train_loss = nn.BCELoss()
-valid_loss = nn.BCELoss()
+train_loss = nn.BCEWithLogitsLoss(size_average=False)
+valid_loss = nn.BCEWithLogitsLoss(size_average=False)
 train_dataset = DNase_Train_Dataset(data_path, transform=None)
 valid_dataset = DNase_Valid_Dataset(data_path, transform=None)
 data_cast = lambda x: torch.autograd.Variable(x).float()
@@ -112,7 +112,6 @@ class BassetRepro(nn.Module):
         self.drop2 = nn.Dropout(p=0.3)
         
         self.fc3 = nn.utils.weight_norm(nn.Linear(1000,164))
-        self.out_layer = nn.Sigmoid()
         
         
     def forward(self, input):
@@ -132,7 +131,7 @@ class BassetRepro(nn.Module):
         
         x = self.fc3(x)
         
-        return self.out_layer(x)
+        return x
         
     
     
