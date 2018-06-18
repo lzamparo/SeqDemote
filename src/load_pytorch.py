@@ -4,6 +4,42 @@ import h5py
 import numpy as np
 
 
+class Embedded_k562_ATAC_train_dataset(Dataset):
+    """ Load up Han's embedded k562 ATAC data for training"""
+    
+    def __init__(self, h5_filepath, transform=None):
+        
+        self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
+        self.num_entries = 0 # fixme, find the true number
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        pass
+    
+    def __len__(self):
+        return self.num_entries
+    
+    def close(self):
+        self.h5f.close()
+        
+class Embedded_k562_ATAC_validation_dataset(Dataset):
+    """ Load up Han's embedded k562 ATAC data for validation """
+    
+    def __init__(self, h5_filepath, transform=None):
+        
+        self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
+        self.num_entries = 0 # fixme, find the true number
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        pass
+    
+    def __len__(self):
+        return self.num_entries
+    
+    def close(self):
+        self.h5f.close()
+
 class ATAC_Train_Dataset(Dataset):
     """ Load the training data set.  Multiple workers need to use
     forked processes, so stateful stuff from the input is not passed on (maybe??)"""
