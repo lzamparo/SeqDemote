@@ -5,16 +5,22 @@ import numpy as np
 
 
 class Embedded_k562_ATAC_train_dataset(Dataset):
-    """ Load up Han's embedded k562 ATAC data for training"""
+    """ Load up Han's embedded k562 ATAC data for training """
     
     def __init__(self, h5_filepath, transform=None):
         
+        self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
-        self.num_entries = 0 # fixme, find the true number
+        self.num_entries = self.h5f['/data/training/train_data'].shape[0]
         self.transform = transform
         
     def __getitem__(self, index):
-        pass
+        
+        features = self.h5f['/data/training/train_data'][index]
+        labels = self.h5f['/labels/training/train_labels'][index]
+        if self.transform is not None:
+            features = self.transform(features)        
+        return features, labels
     
     def __len__(self):
         return self.num_entries
@@ -27,12 +33,18 @@ class Embedded_k562_ATAC_validation_dataset(Dataset):
     
     def __init__(self, h5_filepath, transform=None):
         
+        self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
-        self.num_entries = 0 # fixme, find the true number
+        self.num_entries = self.h5f['/data/validation/valid_data'].shape[0]
         self.transform = transform
         
     def __getitem__(self, index):
-        pass
+        
+        features = self.h5f['/data/validation/valid_data'][index]
+        labels = self.h5f['/labels/validation/valid_labels'][index]
+        if self.transform is not None:
+            features = self.transform(features)        
+        return features, labels
     
     def __len__(self):
         return self.num_entries

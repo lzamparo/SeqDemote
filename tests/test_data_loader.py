@@ -129,6 +129,7 @@ def test_build_heme_data_loader_pvsf():
 
 def test_heme_data_shape():
     """ Is my Hematopoetic data the right size and shape """
+    
     data_loader = load.HematopoeticDataLoader(data_path=heme_path)
     data_loader.load_train()
     num_chunks = range(heme_num_chunks_train)
@@ -168,21 +169,37 @@ def test_validation_batch_encoding_sum():
         
 def test_any_always_negatives_training():
     """ Are there any always-negative examples in the training set? """
+    
     data_loader = load.StandardDataLoader(data_path=path)
     data_loader.load_train()    
+    total_peaks_on = 0
+    total_peaks_off = 0
     for e, (x_chunk, y_chunk) in zip(range(basset_num_chunks_train),data_loader.create_batch_gen()):
         for label_vector in y_chunk:
-            total_peaks_on = np.sum(label_vector)
-            ok_(total_peaks_on > 0)    
+            total_peaks = np.sum(label_vector)
+            if total_peaks > 0:
+                total_peaks_on += 1
+            else:
+                total_peaks_off += 1
+    peak_frac = total_peaks_off / total_peaks_on
+    ok_(0.0 < peak_frac < 1.0)
             
 def test_any_always_negatives_validation():
     """ Are there any always-negative examples in the validation set? """
+    
     data_loader = load.StandardDataLoader(data_path=path)
     data_loader.load_validation()    
+    total_peaks_on = 0
+    total_peaks_off = 0
     for e, (x_chunk, y_chunk) in zip(range(basset_num_chunks_valid),data_loader.create_valid_gen()):
         for label_vector in y_chunk:
-            total_peaks_on = np.sum(label_vector)
-            ok_(total_peaks_on > 0)
+            total_peaks = np.sum(label_vector)
+            if total_peaks > 0:
+                total_peaks_on += 1
+            else:
+                total_peaks_off += 1
+    peak_frac = total_peaks_off / total_peaks_on
+    ok_(0.0 < peak_frac < 1.0)
             
 
 def test_enumerate_malformed_validation_data():

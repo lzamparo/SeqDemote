@@ -6,9 +6,10 @@ from torch.autograd import Variable
 from nose.tools import eq_, ok_ 
 
 from utils.train_utils import find_project_root
-from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer
+from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer, Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_validation_dataset
 
 '''
+The mouse ASA data for CD8+ effector
 /                        Group
 /data                    Group
 /data/test_in            Dataset {12422, 4, 1, 300}
@@ -20,10 +21,31 @@ from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer
 /labels/valid_out        Dataset {6818, 5}
 '''
 
+
+'''
+The K562 embedded data, complete with overlap of ChIP-seq peaks
+/                        Group
+/data                    Group
+/data/training           Group
+/data/training/train_data Dataset {15567, 84300}
+/data/validation         Group
+/data/validation/valid_data Dataset {1704, 84300}
+/labels                  Group
+/labels/training         Group
+/labels/training/train_labels Dataset {15567, 209}
+/labels/validation       Group
+/labels/validation/valid_labels Dataset {1704, 209}
+'''
+
 path = os.path.join(find_project_root(), "data", "ATAC", "mouse_asa", "mouse_asa_2k.h5")
 valid_examples = 6362
 batch_size = 128
 subsequence_size = 200
+num_batches = valid_examples // batch_size
+
+k562_path = os.path.join(find_project_root(), "data", "ATAC", "K562", "K562_embed_TV_split.h5")
+k562_valid_examples = 1704
+batch_size = 64
 num_batches = valid_examples // batch_size
 
 def setup_dataset_and_loader(transform=False, workers=1):
@@ -40,8 +62,25 @@ def setup_dataset_and_loader(transform=False, workers=1):
     return valid_dataset, valid_loader
 
 
+def setup_k562_dataset_and_loader(transform=None, workers=1):
+    if transform:
+        transformer = SubsequenceTransformer(subsequence_size)
+        valid_dataset = Embedded_k562_ATAC_validation_dataset(k562_path)
+    else:
+        valid_dataset = Embedded_k562_ATAC_validation_dataset(k562_path)
+
+def test_build_k562_dataset_and_loader():
+    """ Can I build a dataset for the k562 ATAC data
+    with the correct shapes """
+    
+    valid_dataset, valid_loader = setup_k562_dataset_and_loader()
+    valid_len = len(valid_dataset)
+    valid_dataset.close()
+    eq_(valid_len, k562_valid_examples)
+    
+
 def test_build_data_loader():
-    """ Can I build a dataset the ATAC data with 
+    """ Can I build a dataset for the ATAC data with 
     the correct length """
     
     valid_dataset, valid_loader = setup_dataset_and_loader()
