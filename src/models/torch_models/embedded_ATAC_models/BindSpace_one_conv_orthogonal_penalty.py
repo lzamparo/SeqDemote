@@ -11,7 +11,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
-num_factors = 24  # TODO: find out overlapping TFs to train on
+num_factors = 19  
 batch_size = 32
 momentum = None
 embedded_seq_len = 84300
@@ -42,12 +42,12 @@ class BindSpaceNet(nn.Module):
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
         
-        self.conv1 = nn.utils.weight_norm(nn.Conv2d(1, 20, (1,300)))
-        self.pool1 = nn.LPPool2d(5, kernel_size=(3,1))
+        self.orth_conv1 = nn.utils.weight_norm(nn.Conv2d(1, 20, (1,300)))
+        self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
         
         # Here is where I should think about what makes sense as a region to
         # pool over: how much effetive sequence space do I want to consider?
-        # kernel_size(1,3) gives me effectively 23 bases of consideration
+        # kerlnel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
 
         conv_size = self._get_conv_output(input_size)
@@ -65,8 +65,8 @@ class BindSpaceNet(nn.Module):
         
     def forward(self, input):
         
-        x = self.pool1(self.relu(self.conv1(input)))
-
+        x = self.pool1(self.relu(self.orth_conv1(input)))
+        
         # flatten layer
         x = x.view(x.size(0), -1)
         
@@ -84,8 +84,9 @@ class BindSpaceNet(nn.Module):
         return n_size
 
     def _forward_features(self, x):
-        x_c1 = self.conv1(x)
+        x_c1 = self.orth_conv1(x)
         x_p1 = self.pool1(x_c1)
+
         return x_p1
     
 net = BindSpaceNet(num_factors=num_factors)
@@ -104,7 +105,8 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
 
 net.apply(init_weights)
 
-weights, biases, sparse_weights = [], [], []
+# Collect weight, bias parameters for regularization
+weights, biases, sparse_weights, additional_losses  = [], [], [], []
 for name, p in net.named_parameters():
     if 'bias' in name:
         biases += [p]
@@ -115,7 +117,20 @@ for name, p in net.named_parameters():
     else:
         weights += [p]
     
-  
+
+
+# Impose an additional decorrelative penalty on the conv filters
+orth_lambda = 1e-6
+orth_loss = torch.tensor(torch.FloatTensor(1), requires_grad=True)
+for name, p in net.named_parameters():
+    if 'orth' in name and 'weight_v' in name:
+        p_flattened = p.view(p.size(0),-1)
+        WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
+        WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
+        orth_loss = orth_loss + (orth_lambda * WWt.sum())
+        
+additional_losses.append(orth_loss)
+
 # Initialize the params, put together the arguments for the optimizer        
 optimizer = torch.optim.Adam
 optimizer_param_dicts = [

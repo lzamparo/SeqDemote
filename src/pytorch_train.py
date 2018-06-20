@@ -100,6 +100,11 @@ else:
     {'params': weights, 'weight_decay': 1e-4},
                 {'params': biases, 'weight_decay': 0}
                 ], lr=learning_rate_schedule[0], momentum=momentum)        
+  
+if hasattr(model_module, "additional_losses"):
+    additional_losses = []
+    for l in model_module.additional_losses:  
+        additional_losses.append(l)
     
 optim.zero_grad()
 
@@ -166,8 +171,10 @@ for epoch in range(num_epochs):
         y_pred = model(x)
         
         loss = train_utils.per_task_loss(y_pred, y, training_loss)
-        
-        if (batch_idx + 1) % 100 == 0:
+        for reg in additional_losses:
+            loss += reg
+           
+        if (batch_idx + 1) % 50 == 0:
             print('Epoch [{}/{}], batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, 
                                                                       num_epochs, 
                                                                       batch_idx+1, 
@@ -207,7 +214,7 @@ for epoch in range(num_epochs):
             y_pred = model(x)
             
             loss = valid_loss(y_pred, y)
-            if (batch_idx + 1) % 50 == 0:
+            if (batch_idx + 1) % 10 == 0:
                 print("validation batch ", batch_idx, " : ", loss.data)
             losses.append(loss.data)
             if cuda:

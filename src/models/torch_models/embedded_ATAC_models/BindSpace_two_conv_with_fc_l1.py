@@ -103,7 +103,7 @@ class BindSpaceNet(nn.Module):
         x_p2 = self.pool2(x_c2)
         return x_p2
     
-net = BindSpaceNet()
+net = BindSpaceNet(num_factors=num_factors)
 
 
 def init_weights(m, gain=nn.init.calculate_gain('relu')):

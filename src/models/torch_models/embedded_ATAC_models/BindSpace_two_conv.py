@@ -11,7 +11,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
-num_factors = 19  # TODO: find out overlapping TFs to train on
+num_factors = 19  
 batch_size = 32
 momentum = None
 embedded_seq_len = 84300
@@ -94,7 +94,7 @@ class BindSpaceNet(nn.Module):
         x_p2 = self.pool2(x_c2)
         return x_p2
     
-net = BindSpaceNet()
+net = BindSpaceNet(num_factors=num_factors)
 
 
 def init_weights(m, gain=nn.init.calculate_gain('relu')):
