@@ -11,12 +11,13 @@ class Embedded_k562_ATAC_train_dataset(Dataset):
         
         self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
-        self.num_entries = self.h5f['/data/training/train_data'].shape[0]
+        self.num_entries, self.rasterized_length = self.h5f['/data/training/train_data'].shape
         self.transform = transform
         
     def __getitem__(self, index):
         
         features = self.h5f['/data/training/train_data'][index]
+        features
         labels = self.h5f['/labels/training/train_labels'][index]
         if self.transform is not None:
             features = self.transform(features)        
@@ -35,7 +36,7 @@ class Embedded_k562_ATAC_validation_dataset(Dataset):
         
         self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
-        self.num_entries = self.h5f['/data/validation/valid_data'].shape[0]
+        self.num_entries, self.rasterized_length = self.h5f['/data/validation/valid_data'].shape
         self.transform = transform
         
     def __getitem__(self, index):
@@ -173,6 +174,21 @@ class DNase_Valid_Dataset(Dataset):
         self.h5f.close()
         
 
+class EmbeddingReshapeTransformer(object):
+    """ Reshapes the rasterized embedded ATA-seq windows using the sequence length
+    and dimensional embedding. """ 
+    
+    def __init__(self, embedding_dim, sequence_length):
+        assert isinstance(embedding_dim, int)
+        assert isinstance(sequence_length, int)
+        self.embedding_dim = embedding_dim
+        self.sequence_length = sequence_length
+        
+    def __call__(self, embedded_rasterized):
+        rasterized_length = max(embedded_rasterized.shape)
+        return embedded_rasterized.reshape((1,rasterized_length // self.embedding_dim, self.embedding_dim))
+        
+        
         
 class SubsequenceTransformer(object):
     """ extract and sub-sample a sequence of given length after
