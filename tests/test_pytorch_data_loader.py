@@ -6,7 +6,11 @@ from torch.autograd import Variable
 from nose.tools import eq_, ok_ 
 
 from utils.train_utils import find_project_root
-from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer, Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_validation_dataset
+from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer
+from load_pytorch import Embedded_k562_ATAC_train_dataset
+from load_pytorch import Embedded_k562_ATAC_validation_dataset
+from load_pytorch import EmbeddingReshapeTransformer
+
 
 '''
 The mouse ASA data for CD8+ effector
@@ -20,7 +24,6 @@ The mouse ASA data for CD8+ effector
 /labels/train_out        Dataset {199078, 5}
 /labels/valid_out        Dataset {6818, 5}
 '''
-
 
 '''
 The K562 embedded data, complete with overlap of ChIP-seq peaks
@@ -45,8 +48,10 @@ num_batches = valid_examples // batch_size
 
 k562_path = os.path.join(find_project_root(), "data", "ATAC", "K562", "K562_embed_TV_split.h5")
 k562_valid_examples = 1704
-batch_size = 64
-num_batches = valid_examples // batch_size
+embedding_dim = 300
+sequence_length = 84300
+k562_batch_size = 64
+k562_num_batches = k562_valid_examples // k562_batch_size
 
 def setup_dataset_and_loader(transform=False, workers=1):
     if transform:
@@ -62,12 +67,22 @@ def setup_dataset_and_loader(transform=False, workers=1):
     return valid_dataset, valid_loader
 
 
-def setup_k562_dataset_and_loader(transform=None, workers=1):
+def setup_k562_dataset_and_loader(transform=False, workers=1):
     if transform:
-        transformer = SubsequenceTransformer(subsequence_size)
-        valid_dataset = Embedded_k562_ATAC_validation_dataset(k562_path)
+        transformer = EmbeddingReshapeTransformer(embedding_dim, 
+                                                 sequence_length)
+        valid_dataset = Embedded_k562_ATAC_validation_dataset(k562_path, transform=transformer)
     else:
         valid_dataset = Embedded_k562_ATAC_validation_dataset(k562_path)
+    
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=k562_batch_size,
+                              shuffle=True,
+                              num_workers=workers)
+    return valid_dataset, valid_loader
+
+##### k562 data loader tests
+
 
 def test_build_k562_dataset_and_loader():
     """ Can I build a dataset for the k562 ATAC data
@@ -78,6 +93,45 @@ def test_build_k562_dataset_and_loader():
     valid_dataset.close()
     eq_(valid_len, k562_valid_examples)
     
+def test_build_k562_dataset_and_loader_with_transform():
+    """ Can I build a dataset for the k562 ATAC data
+    with the correct shapes """
+    
+    valid_dataset, valid_loader = setup_k562_dataset_and_loader(transform=True)
+    valid_len = len(valid_dataset)
+    valid_dataset.close()
+    eq_(valid_len, k562_valid_examples)    
+    
+def test_iterate_k562_data_loader():
+    """ Iterate throught the dataloader backed by 
+    the dataset, make sure the number of points seen
+    is in the neighbourhood of what's correct.
+    """
+    valid_dataset, valid_loader = setup_k562_dataset_and_loader(transform=True)
+
+    torch.manual_seed(0)
+    num_epochs = 1
+    data_seen = 0
+    lower_bound = k562_batch_size * (k562_num_batches - 1)
+
+    for epoch in range(num_epochs):
+        for batch_idx, (x, y) in enumerate(valid_loader):
+    
+            x, y = Variable(x), Variable(y)
+            
+            ok_(batch_idx <= num_batches)
+            data_seen += x.size()[0]
+            
+            if batch_idx % 10 == 0:
+                print('Epoch:', epoch+1, end='')
+                print(' | Batch index:', batch_idx, end='')
+                print(' | Batch size:', y.size()[0])
+                
+        ok_(lower_bound <= data_seen <= k562_valid_examples) 
+        
+    valid_dataset.close()
+    
+##### ATAC data loader tests
 
 def test_build_data_loader():
     """ Can I build a dataset for the ATAC data with 
@@ -124,8 +178,6 @@ def test_lengths():
             
     valid_dataset.close()
             
-        
-    
 
 def test_transform_data_loader():
     """ Make sure the dataset has the correct 

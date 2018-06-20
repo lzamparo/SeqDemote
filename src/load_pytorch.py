@@ -13,6 +13,12 @@ class Embedded_k562_ATAC_train_dataset(Dataset):
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
         self.num_entries, self.rasterized_length = self.h5f['/data/training/train_data'].shape
         self.transform = transform
+        TF_overlaps = [s.encode('utf-8') for s in ["CEBPB","CEBPG", "CREB3L1", "CTCF",
+                                                   "CUX1","ELK1","ETV1","FOXJ2","KLF13",
+                                                   "KLF16","MAFK","MAX","MGA","NR2C2",
+                                                   "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]]
+        TF_colnames = self.h5f['/labels/training/train_labels'].attrs['column_names']
+        self.TF_mask_array = np.array([n in TF_overlaps for n in TF_colnames])
         
     def __getitem__(self, index):
         
@@ -20,7 +26,8 @@ class Embedded_k562_ATAC_train_dataset(Dataset):
         features
         labels = self.h5f['/labels/training/train_labels'][index]
         if self.transform is not None:
-            features = self.transform(features)        
+            features = self.transform(features)
+        labels = labels[self.TF_mask_array]
         return features, labels
     
     def __len__(self):
@@ -38,13 +45,20 @@ class Embedded_k562_ATAC_validation_dataset(Dataset):
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
         self.num_entries, self.rasterized_length = self.h5f['/data/validation/valid_data'].shape
         self.transform = transform
+        TF_overlaps = [s.encode('utf-8') for s in ["CEBPB","CEBPG", "CREB3L1", "CTCF",
+                                               "CUX1","ELK1","ETV1","FOXJ2","KLF13",
+                                               "KLF16","MAFK","MAX","MGA","NR2C2",
+                                               "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]]
+        TF_colnames = self.h5f['/labels/training/train_labels'].attrs['column_names']
+        self.TF_mask_array = np.array([n in TF_overlaps for n in TF_colnames])        
         
     def __getitem__(self, index):
         
         features = self.h5f['/data/validation/valid_data'][index]
         labels = self.h5f['/labels/validation/valid_labels'][index]
         if self.transform is not None:
-            features = self.transform(features)        
+            features = self.transform(features)
+        labels = labels[self.TF_mask_array]
         return features, labels
     
     def __len__(self):

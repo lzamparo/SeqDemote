@@ -49,9 +49,6 @@ class BindSpaceNet(nn.Module):
         # pool over: how much effetive sequence space do I want to consider?
         # kerlnel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
-        
-        self.conv2 = nn.utils.weight_norm(nn.Conv2d(20,10,(30,1)))
-        self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
 
@@ -69,7 +66,6 @@ class BindSpaceNet(nn.Module):
     def forward(self, input):
         
         x = self.pool1(self.relu(self.conv1(input)))
-        x = self.pool2(self.relu(self.conv2(x)))
         
         # flatten layer
         x = x.view(x.size(0), -1)
@@ -90,9 +86,8 @@ class BindSpaceNet(nn.Module):
     def _forward_features(self, x):
         x_c1 = self.conv1(x)
         x_p1 = self.pool1(x_c1)
-        x_c2 = self.conv2(x_p1)
-        x_p2 = self.pool2(x_c2)
-        return x_p2
+
+        return x_p1
     
 net = BindSpaceNet()
 

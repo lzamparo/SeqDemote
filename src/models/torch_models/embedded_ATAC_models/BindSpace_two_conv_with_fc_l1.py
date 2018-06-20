@@ -11,7 +11,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
-num_factors = 19  # TODO: find out overlapping TFs to train on
+num_factors = 19
 batch_size = 32
 momentum = None
 embedded_seq_len = 84300
@@ -26,6 +26,13 @@ learning_rate_schedule = {
 
 validate_every = 1
 save_every = 1
+
+
+def l1_penalty(var):
+    return torch.abs(var).sum()
+
+#l1_regularization = lambda1 * l1_penalty(layer1_out)
+#loss = train_loss + l1_regularization
 
 train_loss = nn.BCEWithLogitsLoss(size_average=False)
 valid_loss = nn.BCEWithLogitsLoss(size_average=False)
@@ -54,6 +61,8 @@ class BindSpaceNet(nn.Module):
         self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
+        
+        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, conv_size))
 
         # I'm not sure I want to reshape the output of all conv-pool
         # filters into one long vector; think it makes sense to do 
@@ -73,10 +82,10 @@ class BindSpaceNet(nn.Module):
         
         # flatten layer
         x = x.view(x.size(0), -1)
+        x_sp = self.relu(self.fc1(x))
+        x = self.relu(self.sparse_fc1(x_sp))
         
-        x = self.relu(self.sparse_fc1(x))
-        
-        return x
+        return x, x_sp
     
     # helper function to calculate number of units to expect for 
     # FC layers
