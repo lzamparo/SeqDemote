@@ -121,13 +121,12 @@ for name, p in net.named_parameters():
 
 # Impose an additional decorrelative penalty on the conv filters
 orth_lambda = 1e-6
-orth_loss = torch.tensor(torch.FloatTensor(1), requires_grad=True)
 for name, p in net.named_parameters():
     if 'orth' in name and 'weight_v' in name:
         p_flattened = p.view(p.size(0),-1)
         WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
         WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
-        orth_loss = orth_loss + (orth_lambda * WWt.sum())
+        orth_loss = orth_lambda * WWt.sum()
         
 additional_losses.append(orth_loss)
 

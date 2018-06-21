@@ -82,10 +82,10 @@ class BindSpaceNet(nn.Module):
         
         # flatten layer
         x = x.view(x.size(0), -1)
-        x_sp = self.relu(self.fc1(x))
-        x = self.relu(self.sparse_fc1(x_sp))
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.sparse_fc1(x))
         
-        return x, x_sp
+        return x
     
     # helper function to calculate number of units to expect for 
     # FC layers

@@ -100,9 +100,9 @@ else:
     {'params': weights, 'weight_decay': 1e-4},
                 {'params': biases, 'weight_decay': 0}
                 ], lr=learning_rate_schedule[0], momentum=momentum)        
-  
+
+additional_losses = []  
 if hasattr(model_module, "additional_losses"):
-    additional_losses = []
     for l in model_module.additional_losses:  
         additional_losses.append(l)
     
@@ -160,7 +160,7 @@ for epoch in range(num_epochs):
     
     print("Starting training for epoch ", epoch)
     model.train()  # set model to training, if not already.
-    losses = []
+    epoch_losses = []
     epoch_start_time = time.time()
     total_batches = len(train_loader)
     for batch_idx, (x, y) in enumerate(train_loader):
@@ -170,10 +170,11 @@ for epoch in range(num_epochs):
             x, y = x.cuda(async=True), y.cuda(async=True)
         y_pred = model(x)
         
-        loss = train_utils.per_task_loss(y_pred, y, training_loss)
+        losses = train_utils.per_task_loss(y_pred, y, training_loss,do_sum=False)
         for reg in additional_losses:
-            loss += reg
-           
+            losses.append(reg)
+        
+        loss = sum(losses)   
         if (batch_idx + 1) % 50 == 0:
             print('Epoch [{}/{}], batch [{}/{}], Loss: {:.4f}'.format(epoch + 1, 
                                                                       num_epochs, 
@@ -182,19 +183,19 @@ for epoch in range(num_epochs):
                                                                       loss.item()))
         
         optim.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         
         # Clip gradient if specified in model file
         if hasattr(model_module, "clipping"):
             nn.utils.clip_grad_norm_(model.parameters(), model_module.clipping)
         
         optim.step()           
-        losses.append(loss.data)
+        epoch_losses.append(loss.data)
         
 
     epoch_end_time = time.time()
-    losses_train.append(losses)
-    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(np.array(losses)))) 
+    losses_train.append(epoch_losses)
+    print("Mean training loss:\t\t {0:.6f}.".format(np.mean(np.array(epoch_losses)))) 
     print("Training for epoch ", epoch, " took ", epoch_end_time - epoch_start_time, "s", flush=True)
     
     ### Do we validate?
