@@ -11,7 +11,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
-num_factors = 19
+num_factors = 19  
 batch_size = 32
 momentum = None
 embedded_seq_len = 84300
@@ -26,7 +26,6 @@ learning_rate_schedule = {
 
 validate_every = 1
 save_every = 1
-
 
 train_loss = nn.BCEWithLogitsLoss(size_average=False)
 valid_loss = nn.BCEWithLogitsLoss(size_average=False)
@@ -43,7 +42,7 @@ class BindSpaceNet(nn.Module):
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
         
-        self.conv1 = nn.utils.weight_norm(nn.Conv2d(1, 20, (1,300)))
+        self.orth_conv1 = nn.utils.weight_norm(nn.Conv2d(1, 20, (1,300)))
         self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
         
         # Here is where I should think about what makes sense as a region to
@@ -55,8 +54,6 @@ class BindSpaceNet(nn.Module):
         self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
-        
-        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, conv_size))
 
         # I'm not sure I want to reshape the output of all conv-pool
         # filters into one long vector; think it makes sense to do 
@@ -76,7 +73,7 @@ class BindSpaceNet(nn.Module):
         
         # flatten layer
         x = x.view(x.size(0), -1)
-        x = self.relu(self.fc1(x))
+        
         x = self.relu(self.sparse_fc1(x))
         
         return x
@@ -113,22 +110,28 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
 
 net.apply(init_weights)
 
-# Collect weights, biases, and impose an additional sparsity 
-# penalty on the second fully connected layer
-weights, biases, sparse_weights, additional_losses = [], [], [], []
+weights, biases, sparse_weights = [], [], []
 for name, p in net.named_parameters():
     if 'bias' in name:
         biases += [p]
         
     elif 'sparse' in name:
         sparse_weights += [p]
-        if 'weight_v' in name:
-            L1_loss = 5e-3 * (torch.abs(p)).sum()
-            additional_losses.append(L1_loss)
     
     else:
         weights += [p]
     
+    
+# Impose an additional decorrelative penalty on the conv filters
+orth_lambda = 1e-6
+for name, p in net.named_parameters():
+    if 'orth' in name and 'weight_v' in name:
+        p_flattened = p.view(p.size(0),-1)
+        WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
+        WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
+        orth_loss = orth_lambda * WWt.sum()
+        
+additional_losses.append(orth_loss)
   
 # Initialize the params, put together the arguments for the optimizer        
 optimizer = torch.optim.Adam
