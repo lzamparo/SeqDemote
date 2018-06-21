@@ -11,7 +11,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
-num_factors = 19
+num_factors = 19  
 batch_size = 32
 momentum = None
 embedded_seq_len = 84300
@@ -27,7 +27,6 @@ learning_rate_schedule = {
 validate_every = 1
 save_every = 1
 
-
 train_loss = nn.BCEWithLogitsLoss(size_average=False)
 valid_loss = nn.BCEWithLogitsLoss(size_average=False)
 train_dataset = Embedded_k562_ATAC_train_dataset(data_path, transform=transformer)
@@ -38,7 +37,7 @@ label_cast = lambda y: torch.autograd.Variable(y).float()
 
 class BindSpaceNet(nn.Module):
     
-    def __init__(self, input_size=(1, 281, 300), num_factors=24):
+    def __init__(self, input_size=(1, 281, 300), num_factors=19):
         
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
@@ -50,13 +49,8 @@ class BindSpaceNet(nn.Module):
         # pool over: how much effetive sequence space do I want to consider?
         # kerlnel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
-        
-        self.conv2 = nn.utils.weight_norm(nn.Conv2d(20,10,(30,1)))
-        self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
-        
-        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, conv_size))
 
         # I'm not sure I want to reshape the output of all conv-pool
         # filters into one long vector; think it makes sense to do 
@@ -72,11 +66,10 @@ class BindSpaceNet(nn.Module):
     def forward(self, input):
         
         x = self.pool1(self.relu(self.conv1(input)))
-        x = self.pool2(self.relu(self.conv2(x)))
         
         # flatten layer
         x = x.view(x.size(0), -1)
-        x = self.relu(self.fc1(x))
+        
         x = self.relu(self.sparse_fc1(x))
         
         return x
@@ -93,9 +86,8 @@ class BindSpaceNet(nn.Module):
     def _forward_features(self, x):
         x_c1 = self.conv1(x)
         x_p1 = self.pool1(x_c1)
-        x_c2 = self.conv2(x_p1)
-        x_p2 = self.pool2(x_c2)
-        return x_p2
+
+        return x_p1
     
 net = BindSpaceNet(num_factors=num_factors)
 
@@ -113,8 +105,6 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
 
 net.apply(init_weights)
 
-# Collect weights, biases, and impose an additional sparsity 
-# penalty on the second fully connected layer
 weights, biases, sparse_weights, additional_losses = [], [], [], []
 sparsity_lambda = 5e-3
 for name, p in net.named_parameters():
@@ -125,7 +115,7 @@ for name, p in net.named_parameters():
         sparse_weights += [p]
         if 'weight_v' in name:
             L1_loss = sparsity_lambda * (torch.abs(p)).sum()
-            additional_losses.append(L1_loss)
+            additional_losses.append(L1_loss)        
     
     else:
         weights += [p]
