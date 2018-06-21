@@ -68,7 +68,7 @@ class BindSpaceNet(nn.Module):
         
     def forward(self, input):
         
-        x = self.pool1(self.relu(self.conv1(input)))
+        x = self.pool1(self.relu(self.orth_conv1(input)))
         x = self.pool2(self.relu(self.conv2(x)))
         
         # flatten layer
@@ -88,7 +88,7 @@ class BindSpaceNet(nn.Module):
         return n_size
 
     def _forward_features(self, x):
-        x_c1 = self.conv1(x)
+        x_c1 = self.orth_conv1(x)
         x_p1 = self.pool1(x_c1)
         x_c2 = self.conv2(x_p1)
         x_p2 = self.pool2(x_c2)
