@@ -110,7 +110,7 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
 
 net.apply(init_weights)
 
-weights, biases, sparse_weights = [], [], []
+weights, biases, sparse_weights, additional_losses = [], [], [], []
 for name, p in net.named_parameters():
     if 'bias' in name:
         biases += [p]
