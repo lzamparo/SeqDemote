@@ -114,7 +114,7 @@ net.apply(init_weights)
 # Impose an additional decorrelative penalty on the conv filters
 # and an additional sparsity penalty on the final FC layer
 orth_lambda = 1e-6
-spasity_lambda = 5e-3
+sparsity_lambda = 5e-3
 weights, biases, sparse_weights, additional_losses = [], [], [], []
 for name, p in net.named_parameters():
     if 'orth' in name and 'weight_v' in name:
