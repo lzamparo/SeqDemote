@@ -18,7 +18,7 @@ auroc_plot = gg.ggplot(df_auroc, gg.aes(x="epoch", y="score", color="model")) + 
     gg.ggtitle("Validation Set AUROC") + \
     gg.ylab("AUROC") + \
     gg.scale_x_continuous(breaks=[i for i in range(20)], labels=[i for i in range(20)])
-auroc_plot.save(os.path.join(os.path.expanduser("~/projects/SeqDemote/results/diagnostic_plots/BindSpace_embedding/"),"AUROC.png"), width=16)
+auroc_plot.save(os.path.join(os.path.expanduser("~/projects/SeqDemote/results/diagnostic_plots/BindSpace_embedding/"),"AUROC.png"), width=20)
 
 aupr_plot = gg.ggplot(df_aupr, gg.aes(x="epoch", y="score", color="model")) + \
     gg.geom_line(size=1.5) + \
@@ -26,4 +26,4 @@ aupr_plot = gg.ggplot(df_aupr, gg.aes(x="epoch", y="score", color="model")) + \
     gg.ggtitle("Validation Set AUPR") + \
     gg.ylab("AUPR") + \
     gg.scale_x_continuous(breaks=[i for i in range(20)], labels=[i for i in range(20)])
-aupr_plot.save(os.path.join(os.path.expanduser("~/projects/SeqDemote/results/diagnostic_plots/BindSpace_embedding/"),"AUPR.png"), width=16)
+aupr_plot.save(os.path.join(os.path.expanduser("~/projects/SeqDemote/results/diagnostic_plots/BindSpace_embedding/"),"AUPR.png"), width=20)
