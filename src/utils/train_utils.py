@@ -116,7 +116,7 @@ def st_accuracy(y, y_hat):
         return -1
     return roc_auc_score(y, y_hat)
 
-def mt_accuracy(y, y_hat):
+def mt_accuracy(y, y_hat, average=True):
     """ 
     multi-task ROC: the un-weighted average of task ROC scores; 
     y_hat := predicted labels
@@ -129,9 +129,12 @@ def mt_accuracy(y, y_hat):
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
         rocs.append(roc_auc_score(targets, preds))
     
-    return np.mean(rocs)
+    if average:
+        return np.mean(rocs)
+    else:
+        return rocs
 
-def mt_precision(y, y_hat):
+def mt_precision(y, y_hat, average=True):
     """
     multi-task precision: the un-weighted average of task precision scores;
     y_hat := predicted labels
@@ -144,7 +147,10 @@ def mt_precision(y, y_hat):
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
         precisions.append(average_precision_score(targets, preds))
     
-    return np.mean(precisions)
+    if average:
+        return np.mean(precisions)
+    else:
+        return precisions
 
 
 ### Manage the learning rate schedules

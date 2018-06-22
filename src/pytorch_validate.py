@@ -74,7 +74,14 @@ for batch_idx, (x, y) in enumerate(valid_loader):
     valid_outputs.append(y_pred.data.numpy())
     
 print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
-auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
-print("    validation roc:\t {0:.4f}.".format(auroc * 100))
-print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
+aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+
+# Save the results to file
+filename = model_config.lstrip('BindSpace_').rstrip(".py") + ".txt"
+with open(os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir,filename),'w') as f:
+    for e in aupr:
+        print(e)
+
+#print("    validation roc:\t {0:.4f}.".format(auroc * 100))
+#print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
