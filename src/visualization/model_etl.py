@@ -18,17 +18,17 @@ def pkl_to_df(model_dir):
     models = [pickle.load(open(f,'rb')) for f in model_files]
     
     # next, turn this collection of python objects into a handful of tidy data pandas dfs
-    dfs_auc = [pd.DataFrame.from_items([('model',[name for i in range(len(model['losses_valid_auc']))]),('epoch',[i for i in range(len(model['losses_valid_auc']))]), ('measure', ['validation AUC' for i in range(len(model['losses_valid_auc']))]),('score', model['losses_valid_auc'])]) for name, model in zip(model_names, models)]
-    df_auc = pd.concat(dfs_auc)
+    dfs_auroc = [pd.DataFrame.from_items([('model',[name for i in range(len(model['losses_valid_auc']))]),('epoch',[i for i in range(len(model['losses_valid_auc']))]), ('measure', ['validation AUROC' for i in range(len(model['losses_valid_auc']))]),('score', model['losses_valid_auc'])]) for name, model in zip(model_names, models)]
+    df_auroc = pd.concat(dfs_auroc)
     
     dfs_vloss = [pd.DataFrame.from_items([('model',[name for i in range(len(model['losses_valid_xent']))]),('epoch',[i for i in range(len(model['losses_valid_xent']))]),('measure', ['validation Xent loss' for i in range(len(model['losses_valid_xent']))]),('score', model['losses_valid_xent'])]) for name, model in zip(model_names, models)]
     df_vloss = pd.concat(dfs_vloss)
     
-    dfs_tloss = [pd.DataFrame.from_items([('model',[name for i in range(len(model['losses_train']))]),('epoch',[i for i in range(len(model['losses_train']))]),('measure',['mean training loss' for i in range(len(model['losses_train']))]),('score', np.asarray(model['losses_train']).mean(axis=1))]) for name, model in zip(model_names, models)]
-    df_tloss = pd.concat(dfs_tloss)
+    dfs_aupr = [pd.DataFrame.from_items([('model',[name for i in range(len(model['losses_valid_aupr']))]),('epoch',[i for i in range(len(model['losses_valid_aupr']))]),('measure',['validation AUPR' for i in range(len(model['losses_valid_aupr']))]),('score', model['losses_valid_aupr'])]) for name, model in zip(model_names, models)]
+    df_aupr = pd.concat(dfs_aupr)
     
     # now concat and return all
-    return pd.concat([df_auc, df_vloss, df_tloss])
+    return pd.concat([df_auroc, df_vloss, df_aupr])
 
 def pkl_to_training_loss_df(model_dir):
     ''' Perform ETL on all models in a specified directory (that exist as .pkl files), transform into tidy formatted DataFrame.  Training loss is returned as a per chunk level in a separate df '''
