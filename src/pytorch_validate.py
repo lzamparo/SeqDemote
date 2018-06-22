@@ -79,7 +79,7 @@ auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs
 
 # Save the results to file
 filename = model_config.lstrip('BindSpace_').rstrip(".py") + ".txt"
-with open(os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir,filename),'w') as f:
+with open(os.path.join(train_utils.find_project_root(), 'results' ,filename),'w') as f:
     for e in aupr:
         print(e)
 
