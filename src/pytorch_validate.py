@@ -78,8 +78,9 @@ aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs
 auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 
 # Save the results to file
-filename = model_config.lstrip('BindSpace_').rstrip(".py") + ".txt"
-with open(os.path.join(train_utils.find_project_root(), 'results' ,filename),'w') as f:
+filename = os.path.basename(model_config)
+filename = filename.lstrip('BindSpace_').rstrip(".py") + ".txt"
+with open(os.path.join(train_utils.find_project_root(), 'results' , 'BindSpace_embedding_extension',filename),'w') as f:
     for e in aupr:
         print(e)
 
