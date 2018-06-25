@@ -10,4 +10,4 @@
 cd ~/projects/SeqDemote/src/
 
 # run model
-python pytorch_validate.py $MODEL $SAVESTATE
+python pytorch_validate.py $MODEL $STATE

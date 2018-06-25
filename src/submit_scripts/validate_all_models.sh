@@ -18,12 +18,12 @@ done
 echo "Got all save states, ${#savestates[@]}"
 popd
 
-model_prefix="models/torch_models/embedded_ATAC_models"
+model_prefix="torch_models/embedded_ATAC_models"
 
 for (( i=0; i<${#models[@]}; i++ ));
 do
 	model=${models[$i]}
         savestate=${savestates[$i]}
-	echo "-env all, MODEL=$model_prefix/$model, STATE=$savestate"
-	#bsub -env "all, MODEL=$model, STATE=$savestate" < validate_model.lsf
+	#echo "-env all, MODEL=$model_prefix/$model, STATE=$savestate"
+	bsub -env "all, MODEL=$model, STATE=$savestate" < validate_model.lsf
 done
