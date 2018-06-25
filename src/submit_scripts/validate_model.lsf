@@ -1,0 +1,13 @@
+#!/bin/bash
+#BSUB -J validate_bindspace_model
+#BSUB -n 1
+#BSUB -R "rusage[mem=4] span[ptile=2]"
+#BSUB -W 1:00
+#BSUB -o %J.stdout
+#BSUB -eo %J.stderr
+
+# set up env, cd to source
+cd ~/projects/SeqDemote/src/
+
+# run model
+python pytorch_validate.py $MODEL $SAVESTATE
