@@ -82,7 +82,7 @@ filename = os.path.basename(model_config)
 filename = filename.lstrip('BindSpace_').rstrip(".py") + ".txt"
 with open(os.path.join(train_utils.find_project_root(), 'results' , 'BindSpace_embedding_extension',filename),'w') as f:
     for e in aupr:
-        print(e)
+        print(e, file=f)
 
 #print("    validation roc:\t {0:.4f}.".format(auroc * 100))
 #print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
