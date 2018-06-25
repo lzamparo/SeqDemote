@@ -25,5 +25,5 @@ do
 	model=${models[$i]}
         savestate=${savestates[$i]}
 	#echo "-env all, MODEL=$model_prefix/$model, STATE=$savestate"
-	bsub -env "all, MODEL=$model, STATE=$savestate" < validate_model.lsf
+	bsub -env "all, MODEL=$model_prefix/$model, STATE=$savestate" < validate_model.lsf
 done
