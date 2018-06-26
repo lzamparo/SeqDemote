@@ -4,13 +4,17 @@ import numpy as np
 from model_etl import pkl_to_df
 
 ### BindSpace models compared against each other
-model_dir = "~/projects/SeqDemote/results/BindSpace_embedding_extension"
+model_dir = "~/projects/SeqDemote/results/BindSpace_embedding_extension/"
 df = pkl_to_df(model_dir)
 df['model'] = df['model'].apply(lambda x: x.lstrip('BindSpace_'))
 
 title_suffix = os.path.basename(model_dir)
 df_auroc = df[df['measure'] == "validation AUROC"]
 df_aupr = df[df['measure'] == "validation AUPR"]
+
+factors = ["CEBPB","CEBPG", "CREB3L1", "CTCF","CUX1","ELK1","ETV1",
+           "FOXJ2","KLF13","KLF16","MAFK","MAX","MGA","NR2C2",
+           "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]
 
 BindSpace_avg = 0.31415662596238375
 
