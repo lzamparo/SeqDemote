@@ -17,7 +17,7 @@ from utils import accounting, train_utils
 import importlib.util
 from datetime import datetime, timedelta
 import string
-#import simple_spearmint
+import simple_spearmint
 
 from subprocess import Popen
 
