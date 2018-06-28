@@ -35,8 +35,8 @@ expid = expid.split('/')[-1]
 
     
 print("Experiment ID: ", expid)
-model_params_dict = model_module.model_params_dict
-ss = simple_spearmint.SimpleSpearmint(model_params_dict, minimize=False)
+model_hyperparams_dict = model_module.model_hyperparams_dict
+ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
 
 
 def validation_aupr_objective(suggestion, model_module):
