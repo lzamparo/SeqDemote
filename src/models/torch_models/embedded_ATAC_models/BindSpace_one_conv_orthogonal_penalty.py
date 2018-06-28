@@ -17,12 +17,22 @@ momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
-#cuda = True
+cuda = True
 
 learning_rate_schedule = {
 0: 0.005,
 10: 0.002,
 20: 0.0001}
+
+model_hyperparams_dict={'orth_lambda': {'type': 'float', 'min': 1e-6, 'max': 1.0},
+                        'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'sparse_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
+
+default_hyperparams={'orth_lambda': 1e-6,
+                     'weight_lambda': 5e-3,
+                     'bias_lambda': 5e-3,
+                     'sparse_lambda': 10e-3}
 
 validate_every = 1
 save_every = 1
@@ -47,7 +57,7 @@ class BindSpaceNet(nn.Module):
         
         # Here is where I should think about what makes sense as a region to
         # pool over: how much effetive sequence space do I want to consider?
-        # kerlnel_size(1,3) gives me effectively 23 bases of consideration
+        # kernel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
 
         conv_size = self._get_conv_output(input_size)
@@ -58,8 +68,7 @@ class BindSpaceNet(nn.Module):
         # - groups of locally connected layers to further
         # shrink the output before combining them?
         # - encourage a learned hierarchy of groups?
-        
-        # want extra shrinkage here?  
+         
         self.sparse_fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
         
         
@@ -88,8 +97,7 @@ class BindSpaceNet(nn.Module):
         x_p1 = self.pool1(x_c1)
 
         return x_p1
-    
-net = BindSpaceNet(num_factors=num_factors)
+
 
 
 def init_weights(m, gain=nn.init.calculate_gain('relu')):
@@ -102,39 +110,69 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
     if isinstance(m, nn.Conv2d):
         torch.nn.init.orthogonal_(m.weight, gain)
         m.bias.data.fill_(0.1)
+    
 
+### Functions that allow for re-initialization of model and
+### optimizer to tune hyperparameters 
+
+def reinitialize_model(num_factors=19):
+    net = BindSpaceNet(num_factors)
+    net.apply(init_weights)
+    return net
+
+
+def get_model_param_lists(net):
+    biases, weights, sparse_weights = [], [], []
+    for name, p in net.named_parameters():
+        if 'bias' in name:
+            biases += [p]
+            
+        elif 'sparse' in name:
+            sparse_weights += [p]
+        
+        else:
+            weights += [p]  
+            
+    return biases, weights, sparse_weights
+    
+def orthogonal_filter_penalty(net, orth_lambda=1e-6):
+    ''' Impose an additional decorrelative penalty on the conv filters '''
+    
+    for name, p in net.named_parameters():
+        if 'orth' in name and 'weight_v' in name:
+            p_flattened = p.view(p.size(0),-1)
+            WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
+            WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
+            orth_loss = orth_lambda * WWt.sum()
+    return orth_loss
+
+def get_additonal_losses(net, hyperparams_dict):
+    return [orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'])]
+
+def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
+    ''' Initialize the params, put together the arguments for the optimizer '''
+
+    weight_lambda = hyperparams_dict['weight_lambda']
+    bias_lambda = hyperparams_dict['bias_lambda']
+    sparse_lambda = hyperparams_dict['sparse_lambda']
+    
+    optimizer = torch.optim.Adam
+    optimizer_param_dicts = [
+        {'params': weights, 'weight_decay': weight_lambda},
+            {'params': biases, 'weight_decay': bias_lambda},
+            {'params': sparse_weights, 'weight_decay': sparse_lambda}            
+    ]
+    return optimizer, optimizer_param_dicts
+ 
+net = BindSpaceNet(num_factors=num_factors)
 net.apply(init_weights)
 
 # Collect weight, bias parameters for regularization
-weights, biases, sparse_weights, additional_losses  = [], [], [], []
-for name, p in net.named_parameters():
-    if 'bias' in name:
-        biases += [p]
-        
-    elif 'sparse' in name:
-        sparse_weights += [p]
-    
-    else:
-        weights += [p]
-    
+weights, biases, sparse_weights = get_model_param_lists(net) 
 
-
-# Impose an additional decorrelative penalty on the conv filters
-orth_lambda = 1e-6
-for name, p in net.named_parameters():
-    if 'orth' in name and 'weight_v' in name:
-        p_flattened = p.view(p.size(0),-1)
-        WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
-        WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
-        orth_loss = orth_lambda * WWt.sum()
-        
-additional_losses.append(orth_loss)
-
-# Initialize the params, put together the arguments for the optimizer        
-optimizer = torch.optim.Adam
-optimizer_param_dicts = [
-        {'params': weights, 'weight_decay': 5e-3},
-        {'params': biases, 'weight_decay': 5e-3},
-        {'params': sparse_weights, 'weight_decay': 10e-3}            
-                    ]
+# Collect optimizer, additional losses     
+additional_losses = get_additonal_losses(net, default_hyperparams)
+optimizer, optimizer_param_dicts = initialize_optimizer(weights, biases, 
+                                                       sparse_weights,default_hyperparams) 
 optimizer_kwargs = {'lr': learning_rate_schedule[0]}
+       
