@@ -171,7 +171,7 @@ net.apply(init_weights)
 weights, biases, sparse_weights = get_model_param_lists(net) 
 
 # Collect optimizer, additional losses     
-additional_losses = get_additonal_losses(net, default_hyperparams)
+additional_losses = get_additional_losses(net, default_hyperparams)
 optimizer, optimizer_param_dicts = initialize_optimizer(weights, biases, 
                                                        sparse_weights,default_hyperparams) 
 optimizer_kwargs = {'lr': learning_rate_schedule[0]}
