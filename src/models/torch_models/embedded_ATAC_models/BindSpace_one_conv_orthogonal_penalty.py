@@ -116,7 +116,7 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
 ### optimizer to tune hyperparameters 
 
 def reinitialize_model(num_factors=19):
-    net = BindSpaceNet(num_factors)
+    net = BindSpaceNet(num_factors=num_factors)
     net.apply(init_weights)
     return net
 
