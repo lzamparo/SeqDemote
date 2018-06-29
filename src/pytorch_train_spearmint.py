@@ -22,23 +22,6 @@ import simple_spearmint
 from subprocess import Popen
 
 
-if len(sys.argv) < 2:
-    sys.exit("Usage: pytorch_train.py <configuration_name>")
-
-model_config = sys.argv[1]
-model_path_name = os.path.join(os.path.expanduser(os.getcwd()),'models',model_config)
-spec = importlib.util.spec_from_file_location(model_config, model_path_name)
-model_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(model_module)
-expid = accounting.generate_expid(model_config)
-expid = expid.split('/')[-1]
-
-    
-print("Experiment ID: ", expid)
-model_hyperparams_dict = model_module.model_hyperparams_dict
-ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
-
-
 def validation_aupr_objective(suggestion, model_module):
     ''' Instantiate the network in the model_module, with 
     hyperparameters for optimizer give by suggestion '''
@@ -62,6 +45,7 @@ def validation_aupr_objective(suggestion, model_module):
         
     print("...Checking to see if CUDA  is required", flush=True)
     if hasattr(model_module, 'cuda'):
+        import torch
         cuda = model_module.cuda and torch.cuda.is_available()
     else:
         cuda = False
@@ -203,6 +187,23 @@ def validation_aupr_objective(suggestion, model_module):
             
             
     return max(losses_valid_aupr)     
+
+
+if len(sys.argv) < 2:
+    sys.exit("Usage: pytorch_train.py <configuration_name>")
+
+model_config = sys.argv[1]
+model_path_name = os.path.join(os.path.expanduser(os.getcwd()),'models',model_config)
+spec = importlib.util.spec_from_file_location(model_config, model_path_name)
+model_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(model_module)
+expid = accounting.generate_expid(model_config)
+expid = expid.split('/')[-1]
+
+    
+print("Experiment ID: ", expid)
+model_hyperparams_dict = model_module.model_hyperparams_dict
+ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
 
 
 # Seed with 5 randomly chosen parameter settings
