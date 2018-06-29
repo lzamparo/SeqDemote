@@ -211,7 +211,7 @@ for n in range(5):
     suggestion = ss.suggest_random()
     
     # Retrieve an objective value for these parameters
-    value = objective(suggestion, model_module)
+    value = validation_aupr_objective(suggestion, model_module)
     print("Random trial {}: {} -> {}".format(n + 1, suggestion, value))
     
     # Update the optimizer on the result
@@ -224,7 +224,7 @@ for n in range(20):
     suggestion = ss.suggest()
     
     # Get an objective value
-    value = objective(suggestion, model_module)
+    value = validation_aupr_objective(suggestion, model_module)
     print("GP trial {}: {} -> {}".format(n + 1, suggestion, value))
     
     # Update the optimizer on the result
