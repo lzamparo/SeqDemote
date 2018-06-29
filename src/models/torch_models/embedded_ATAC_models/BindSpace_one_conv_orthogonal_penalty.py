@@ -135,14 +135,17 @@ def get_model_param_lists(net):
             
     return biases, weights, sparse_weights
     
-def orthogonal_filter_penalty(net, orth_lambda=1e-6):
+def orthogonal_filter_penalty(net, orth_lambda=1e-6, cuda=True):
     ''' Impose an additional decorrelative penalty on the conv filters '''
     
     for name, p in net.named_parameters():
         if 'orth' in name and 'weight_v' in name:
             p_flattened = p.view(p.size(0),-1)
             WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
-            WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
+            eye = torch.Tensor(torch.eye(p_flattened.size(0)))
+            if cuda:
+                eye.cuda()
+            WWt -= eye
             orth_loss = orth_lambda * WWt.sum()
     return orth_loss
 
