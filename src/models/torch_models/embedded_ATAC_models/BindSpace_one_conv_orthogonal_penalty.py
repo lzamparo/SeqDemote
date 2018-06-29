@@ -146,7 +146,7 @@ def orthogonal_filter_penalty(net, orth_lambda=1e-6):
             orth_loss = orth_lambda * WWt.sum()
     return orth_loss
 
-def get_additonal_losses(net, hyperparams_dict):
+def get_additional_losses(net, hyperparams_dict):
     return [orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'])]
 
 def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):

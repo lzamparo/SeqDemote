@@ -39,16 +39,19 @@ class Embedded_k562_ATAC_train_dataset(Dataset):
 class Embedded_k562_ATAC_validation_dataset(Dataset):
     """ Load up Han's embedded k562 ATAC data for validation """
     
-    def __init__(self, h5_filepath, transform=None):
+    def __init__(self, h5_filepath, transform=None, TF_overlaps=None):
         
         self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
         self.num_entries, self.rasterized_length = self.h5f['/data/validation/valid_data'].shape
         self.transform = transform
-        TF_overlaps = [s.encode('utf-8') for s in ["CEBPB","CEBPG", "CREB3L1", "CTCF",
-                                               "CUX1","ELK1","ETV1","FOXJ2","KLF13",
-                                               "KLF16","MAFK","MAX","MGA","NR2C2",
-                                               "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]]
+        if not TF_overlaps:
+            TF_overlaps = [s.encode('utf-8') for s in ["CEBPB","CEBPG", "CREB3L1", "CTCF",
+                                                   "CUX1","ELK1","ETV1","FOXJ2","KLF13",
+                                                   "KLF16","MAFK","MAX","MGA","NR2C2",
+                                                   "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]]
+        else:
+            TF_overlaps = [s.encode('utf-8') for s in TF_overlaps]
         TF_colnames = self.h5f['/labels/training/train_labels'].attrs['column_names']
         self.TF_mask_array = np.array([n in TF_overlaps for n in TF_colnames])        
         
