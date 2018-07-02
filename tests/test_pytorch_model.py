@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 from nose.tools import eq_, ok_ 
 
-from utils.train_utils import find_project_root, mt_precision, mt_accuracy
+from utils.train_utils import find_project_root, mt_avg_precision, mt_accuracy
 from load_pytorch import DNase_Valid_Dataset
 
 path = os.path.join(find_project_root(), "data", "DNase", "encode_roadmap.h5")
@@ -127,7 +127,7 @@ def test_pickle_model():
         ok_(isinstance(y_pred.data, torch.FloatTensor))
         valid_outputs.append(y_pred.data.numpy())    
     
-        aupr = mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+        aupr = mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
         auroc = mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
         losses_valid_aupr.append(aupr)
         losses_valid_auroc.append(auroc)

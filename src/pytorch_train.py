@@ -225,7 +225,7 @@ for epoch in range(num_epochs):
             
         losses_valid_log.append(losses)
         print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-        aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+        aupr = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
         auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs))
         print("    validation roc:\t {0:.4f}.".format(auroc * 100))
         print("    validation aupr:\t {0:.4f}.".format(aupr * 100))

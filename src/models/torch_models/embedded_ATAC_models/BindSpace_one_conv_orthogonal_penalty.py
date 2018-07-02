@@ -18,6 +18,7 @@ embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
 cuda = True
+num_epochs = 10
 
 learning_rate_schedule = {
 0: 0.005,

@@ -108,7 +108,7 @@ def validation_aupr_objective(suggestion, model_module):
     if hasattr(model_module, 'num_epochs'):
         num_epochs = model_module.num_epochs
     else:
-        num_epochs = 20
+        num_epochs = 10
        
     print("...Training model for ", num_epochs, " epochs")
     start_time = time.time()
@@ -180,7 +180,7 @@ def validation_aupr_objective(suggestion, model_module):
                     y_pred = y_pred.cpu()
                 valid_outputs.append(y_pred.data.numpy())
                 
-            aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+            aupr = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
             print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
             losses_valid_aupr.append(aupr)
             

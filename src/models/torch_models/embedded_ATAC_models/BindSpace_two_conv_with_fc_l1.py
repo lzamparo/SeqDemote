@@ -17,12 +17,21 @@ momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
-#cuda = True
+cuda = True
+num_epochs = 10
 
 learning_rate_schedule = {
 0: 0.005,
 10: 0.002,
 20: 0.0001}
+
+model_hyperparams_dict={'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'sparse_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
+
+default_hyperparams={'weight_lambda': 5e-3,
+                     'bias_lambda': 5e-3,
+                     'sparse_lambda': 10e-3}
 
 validate_every = 1
 save_every = 1
@@ -38,7 +47,7 @@ label_cast = lambda y: torch.autograd.Variable(y).float()
 
 class BindSpaceNet(nn.Module):
     
-    def __init__(self, input_size=(1, 281, 300), num_factors=24):
+    def __init__(self, input_size=(1, 281, 300), num_factors=19):
         
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
@@ -97,8 +106,13 @@ class BindSpaceNet(nn.Module):
         x_p2 = self.pool2(x_c2)
         return x_p2
     
-net = BindSpaceNet(num_factors=num_factors)
+### Functions that allow for re-initialization of model and
+### optimizer to tune hyperparameters     
 
+def reinitialize_model(num_factors=19):
+    net = BindSpaceNet(num_factors=num_factors)
+    net.apply(init_weights)
+    return net
 
 def init_weights(m, gain=nn.init.calculate_gain('relu')):
     ''' Recursively initalizes the weights of a network. '''
@@ -111,31 +125,57 @@ def init_weights(m, gain=nn.init.calculate_gain('relu')):
         torch.nn.init.orthogonal_(m.weight, gain)
         m.bias.data.fill_(0.1)
 
-net.apply(init_weights)
-
-# Collect weights, biases, and impose an additional sparsity 
-# penalty on the second fully connected layer
-weights, biases, sparse_weights, additional_losses = [], [], [], []
-sparsity_lambda = 5e-3
-for name, p in net.named_parameters():
-    if 'bias' in name:
-        biases += [p]
+def get_model_param_lists(net):
+    biases, weights, sparse_weights = [], [], []
+    for name, p in net.named_parameters():
+        if 'bias' in name:
+            biases += [p]
+            
+        elif 'sparse' in name:
+            sparse_weights += [p]
         
-    elif 'sparse' in name:
-        sparse_weights += [p]
+        else:
+            weights += [p]  
+            
+    return biases, weights, sparse_weights
+
+def get_sparse_weights_penalty(net, sparse_lambda=1e-6, cuda=True):
+    ''' Impose an additional sparsity penalty on those layers
+    identfied in the model as sparse '''
+    sparse_penalties = []
+    for name, p in net.named_parameters():
         if 'weight_v' in name:
             L1_loss = sparsity_lambda * (torch.abs(p)).sum()
-            additional_losses.append(L1_loss)
+            sparse_penalties.append(L1_loss)        
+    return sparse_penalties
+
+def get_additional_losses(net, hyperparams_dict):
+    return [get_sparse_weights_penalty(net, hyperparams_dict['sparse_lambda'])]
+
+def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
+    ''' Initialize the params, put together the arguments for the optimizer '''
+
+    weight_lambda = hyperparams_dict['weight_lambda']
+    bias_lambda = hyperparams_dict['bias_lambda']
+    sparse_lambda = hyperparams_dict['sparse_lambda']
     
-    else:
-        weights += [p]
-    
-  
-# Initialize the params, put together the arguments for the optimizer        
-optimizer = torch.optim.Adam
-optimizer_param_dicts = [
-        {'params': weights, 'weight_decay': 5e-3},
-        {'params': biases, 'weight_decay': 5e-3},
-        {'params': sparse_weights, 'weight_decay': 10e-3}            
-                    ]
+    optimizer = torch.optim.Adam
+    optimizer_param_dicts = [
+        {'params': weights, 'weight_decay': weight_lambda},
+            {'params': biases, 'weight_decay': bias_lambda},
+            {'params': sparse_weights, 'weight_decay': sparse_lambda}            
+    ]
+    return optimizer, optimizer_param_dicts
+
+
+net = BindSpaceNet(num_factors=num_factors)
+net.apply(init_weights)    
+
+# Collect weight, bias parameters for regularization
+weights, biases, sparse_weights = get_model_param_lists(net) 
+
+# Collect optimizer, additional losses     
+additional_losses = get_additional_losses(net, default_hyperparams)
+optimizer, optimizer_param_dicts = initialize_optimizer(weights, biases, 
+                                                       sparse_weights,default_hyperparams) 
 optimizer_kwargs = {'lr': learning_rate_schedule[0]}

@@ -74,7 +74,7 @@ for batch_idx, (x, y) in enumerate(valid_loader):
     valid_outputs.append(y_pred.data.numpy())
     
 print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-aupr = train_utils.mt_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+aupr = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 
 # Save the results to file

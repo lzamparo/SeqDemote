@@ -69,11 +69,11 @@ def test_mt_accuracy():
 def test_mt_precision():
     ''' make sure MT precision works '''
     test_labels, test_preds = make_classification_labels_and_preds()
-    test_precision = tr_utils.mt_precision(test_labels, test_preds)
+    test_precision = tr_utils.mt_avg_precision(test_labels, test_preds)
     ok_(0.0 < test_precision < 1.0)    
     
 def test_noisy_mt_precision():
     ''' make sure MT precision works '''
     test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
-    test_precision = tr_utils.mt_precision(test_labels, test_preds)
+    test_precision = tr_utils.mt_avg_precision(test_labels, test_preds)
     ok_(0.0 < test_precision < 1.0)   

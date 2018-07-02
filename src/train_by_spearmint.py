@@ -196,7 +196,7 @@ def objective(params_dict, model_module):
                 acc = train_utils.st_accuracy(outputs, np.vstack(labels))
             else:
                 acc = train_utils.mt_accuracy(outputs, np.vstack(labels))
-                precision = train_utils.mt_precision(outputs, np.vstack(labels))
+                precision = train_utils.mt_avg_precision(outputs, np.vstack(labels))
             print("    validation loss:\t {0:.6f}.".format(loss))  ### dump these to a text file somewhere else
             print("    validation roc:\t {0:.2f}.".format(acc * 100))
             losses_valid_log.append(loss)

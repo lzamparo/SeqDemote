@@ -2,7 +2,7 @@ import numpy as np
 import gzip
 import os
 from collections import OrderedDict
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, f1_score
 
 
 ### Weak AggMo implementation attempt.   
@@ -134,7 +134,7 @@ def mt_accuracy(y, y_hat, average=True):
     else:
         return rocs
 
-def mt_precision(y, y_hat, average=True):
+def mt_avg_precision(y, y_hat, average=True):
     """
     multi-task precision: the un-weighted average of task precision scores;
     y_hat := predicted labels
@@ -152,6 +152,23 @@ def mt_precision(y, y_hat, average=True):
     else:
         return precisions
 
+def mt_avg_f1_score(y, y_hat, average=True):
+    """
+    multi-task f1 score: un-weighted f1 scores;
+    y_hat := predicted labels
+    y := actual labels from data
+    """
+    if not y_hat.shape == y.shape:
+        print("Error in f1 score: shame mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+        return -1
+    f1_scores = []
+    for targets, preds in zip(y.transpose(), y_hat.transpose()):
+        f1_scores.append(f1_score(targets, preds))
+    
+    if average:
+        return np.mean(f1_scores)
+    else:
+        return f1_scores
 
 ### Manage the learning rate schedules
 def log_lr_schedule(num_chunks_train, updates=4, base=0.02):
