@@ -47,7 +47,7 @@ def validation_aupr_objective(suggestion, model_module):
     if hasattr(model_module, 'cuda'):
         import torch
         cuda = model_module.cuda and torch.cuda.is_available()
-        print('DEBUG: cuda is :' cuda)
+        print('DEBUG: cuda is :', cuda)
     else:
         cuda = False
         
