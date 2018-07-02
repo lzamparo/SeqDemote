@@ -144,7 +144,8 @@ def orthogonal_filter_penalty(net, orth_lambda=1e-6, cuda=True):
             WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
             eye = torch.Tensor(torch.eye(p_flattened.size(0)))
             if cuda:
-                eye.cuda()
+                eye = eye.cuda()
+            print("type of tensor subtracted from WWt is: ", eye.type())
             WWt -= eye
             orth_loss = orth_lambda * WWt.sum()
     return orth_loss
