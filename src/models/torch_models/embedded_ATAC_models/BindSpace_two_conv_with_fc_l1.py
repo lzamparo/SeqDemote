@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from load_pytorch import Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_validation_dataset
 from load_pytorch import EmbeddingReshapeTransformer
+from utils import torch_model_construction_utils
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
@@ -139,18 +140,8 @@ def get_model_param_lists(net):
             
     return biases, weights, sparse_weights
 
-def get_sparse_weights_penalty(net, sparse_lambda=1e-6, cuda=True):
-    ''' Impose an additional sparsity penalty on those layers
-    identfied in the model as sparse '''
-    sparse_penalties = []
-    for name, p in net.named_parameters():
-        if 'weight_v' in name:
-            L1_loss = sparsity_lambda * (torch.abs(p)).sum()
-            sparse_penalties.append(L1_loss)        
-    return sparse_penalties
-
 def get_additional_losses(net, hyperparams_dict):
-    return [get_sparse_weights_penalty(net, hyperparams_dict['sparse_lambda'])]
+    return [torch_model_construction_utils.get_sparse_weights_penalty(net, hyperparams_dict['sparse_lambda'])]
 
 def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
     ''' Initialize the params, put together the arguments for the optimizer '''

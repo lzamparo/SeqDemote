@@ -20,6 +20,7 @@ import string
 import simple_spearmint
 
 from subprocess import Popen
+from utils import torch_model_construction_utils
 
 
 def validation_aupr_objective(suggestion, model_module):
@@ -27,7 +28,7 @@ def validation_aupr_objective(suggestion, model_module):
     hyperparameters for optimizer give by suggestion '''
     
     print("...Build model")
-    model = model_module.reinitialize_model()
+    model = torch_model_construction_utils.reinitialize_model()
     
     print("...number of parameters: ", train_utils.count_params(model.parameters()))
     print("...layer output shapes:")
@@ -57,8 +58,8 @@ def validation_aupr_objective(suggestion, model_module):
         
     print("...setting up optimizer ", flush=True)
     
-    weights, biases, sparse_weights = model_module.get_model_param_lists(model)
-    optimizer, opd_list = model_module.initialize_optimizer(weights, 
+    weights, biases, sparse_weights = torch_model_construction_utils.get_model_param_lists(model)
+    optimizer, opd_list = torch_model_construction_utils.initialize_optimizer(weights, 
                                                             biases, 
                                                             sparse_weights,
                                                             suggestion)
