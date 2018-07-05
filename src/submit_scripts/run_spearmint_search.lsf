@@ -10,8 +10,8 @@
 
 # set up env, cd to source
 cd ~/projects/SeqDemote/src/
-module load cuda/8.0
-module load cudnn/5.1
+module load cuda/9.1
+module load cudnn/7.0-cuda9
 
 # run model
 python pytorch_train_spearmint.py $MODEL
