@@ -107,6 +107,18 @@ def log_loss(y, t, eps=1e-15):
     losses = log_losses(y, t, eps)
     return np.mean(losses)
 
+
+def thresholded(y_hat, thresh=0.5):
+    """ Return thresholded (i.e predicted) values
+    from a vector of scores """
+    y_hat_dtype = y_hat.dtype
+    y_hat_shape = y_hat.shape
+    thresholded_y_hat = np.empty_like(y_hat)
+    for i, pred in enumerate(y_hat):
+        thresholded_y_hat[i] = 1.0 if pred > thresh else 0.0
+    return thresholded_y_hat
+        
+
 def st_accuracy(y, y_hat):
     """ single-task (peak vs flank) ROC ;
     y_hat := predicted labels
@@ -163,8 +175,10 @@ def mt_avg_f1_score(y, y_hat, average=True):
         return -1
     f1_scores = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        f1_scores.append(f1_score(targets, preds))
-    
+        if not (np.all(preds > 0.0) and np.all(preds < 1.0)):
+            f1_scores.append(f1_score(targets, thresholded(preds)))
+        else:
+            fi_scores.append(f1_score(targets, preds))
     if average:
         return np.mean(f1_scores)
     else:
@@ -181,7 +195,10 @@ def mt_avg_mcc(y, y_hat, average=True):
         return -1
     mcc_scores = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        mcc_scores.append(matthews_corrcoef(targets, preds))
+        if not (np.all(preds > 0.0) and np.all(preds < 1.0)):
+            mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
+        else:
+            mcc_scores.append(matthews_corrcoef(targets, preds))
     
     if average:
         return np.mean(mcc_scores)

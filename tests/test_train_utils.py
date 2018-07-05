@@ -77,3 +77,15 @@ def test_noisy_mt_precision():
     test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
     test_precision = tr_utils.mt_avg_precision(test_labels, test_preds)
     ok_(0.0 < test_precision < 1.0)   
+    
+def test_mt_f1():
+    ''' make sure MT f1 works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
+    test_f1 = tr_utils.mt_avg_f1_score(test_labels, test_preds)
+    ok_(0.0 < test_f1 < 1.0)
+
+def test_mt_mcc():
+    ''' make sure MT MCC works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
+    test_mcc = tr_utils.mt_avg_mcc(test_labels, test_preds)
+    ok_(-1.0 < test_mcc < 1.0)

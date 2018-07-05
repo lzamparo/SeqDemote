@@ -184,6 +184,9 @@ def validation_ap_objective(suggestion, model_module):
                 
             avg_precision = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
             print("    validation average precision:\t {0:.4f}.".format(avg_precision * 100))
+            avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(
+                valid_outputs))
+            print("    validation average F1 score:\t {0:.4f}.".format(avg_f1 * 100))            
             avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(
                 valid_outputs))
             print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
