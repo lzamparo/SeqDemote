@@ -1,25 +1,16 @@
 import sys
 import os
 import time
-import pickle
 
 import numpy as np
-
-import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
 
-from load_pytorch import ATAC_Train_Dataset, ATAC_Valid_Dataset
-from load_pytorch import SubsequenceTransformer
+from torch.utils.data import DataLoader
 from utils import accounting, train_utils
 
 import importlib.util
-from datetime import datetime, timedelta
-import string
 import simple_spearmint
 
-from subprocess import Popen
 from utils import torch_model_construction_utils
 
 
@@ -112,9 +103,6 @@ def validation_ap_objective(suggestion, model_module):
         num_epochs = 10
        
     print("...Training model for ", num_epochs, " epochs")
-    start_time = time.time()
-    prev_time = start_time
-    
     for epoch in range(num_epochs):
         
         print("Starting training for epoch ", epoch)

@@ -46,6 +46,8 @@ def get_sparse_weights_penalty(net, sparse_lambda=1e-6, cuda=True):
     sparse_penalties = []
     for name, p in net.named_parameters():
         if 'weight_v' in name:
+            if cuda:
+                p = p.cuda()
             L1_loss = sparse_lambda * (torch.abs(p)).sum()
             sparse_penalties.append(L1_loss)        
     return sparse_penalties
@@ -58,14 +60,10 @@ def orthogonal_filter_penalty(net, orth_lambda=1e-6, cuda=True):
         if 'orth' in name and 'weight_v' in name:
             p_flattened = p.view(p.size(0),-1)
             WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
-            print("type of tensor for WWt is: ", WWt.type())
             eye = torch.Tensor(torch.eye(p_flattened.size(0)))
             if cuda:
-                print("Before .cuda(), type of tensor subtracted from WWt is: ", eye.type())
                 eye = eye.cuda()
                 WWt = WWt.cuda()
-            print("type of tensor subtracted from WWt is: ", eye.type())
-            print("type of tensor for WWt is: ", WWt.type())
             WWt -= eye
             orth_loss = orth_lambda * WWt.sum()
     return [orth_loss]

@@ -1,5 +1,4 @@
 import numpy as np 
-import gzip
 import os
 from collections import OrderedDict
 from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, matthews_corrcoef
@@ -111,8 +110,6 @@ def log_loss(y, t, eps=1e-15):
 def thresholded(y_hat, thresh=0.5):
     """ Return thresholded (i.e predicted) values
     from a vector of scores """
-    y_hat_dtype = y_hat.dtype
-    y_hat_shape = y_hat.shape
     thresholded_y_hat = np.empty_like(y_hat)
     for i, pred in enumerate(y_hat):
         thresholded_y_hat[i] = 1.0 if pred > thresh else 0.0

@@ -37,6 +37,7 @@ bindspace_path = os.path.join(directory_root,"data/invitro/BindSpace/model_0.2_3
 # get the TF lines, keep those in our own list
 bindspace_factors = []
 embedded_bindspace_factors = []
+
 def parse_line(l):
     parts = l.strip().split()
     tf_name = parts[0].lstrip("#TF_")
