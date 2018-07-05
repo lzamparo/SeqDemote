@@ -1,18 +1,10 @@
 import sys
 import os
-
-import numpy as np
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-
-from load_pytorch import ATAC_Valid_Dataset
-from utils import accounting, train_utils
-
 import importlib.util
 
+import numpy as np
+from torch.utils.data import DataLoader
+from utils import accounting, train_utils
 
 ### Load up and step through validating data
 if len(sys.argv) < 2:

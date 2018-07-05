@@ -4,25 +4,12 @@ import time
 import pickle
 
 import numpy as np
-
+import importlib.util
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.autograd import Variable
 
-from load_pytorch import ATAC_Train_Dataset, ATAC_Valid_Dataset
-from load_pytorch import SubsequenceTransformer
 from utils import accounting, train_utils
-
-import importlib.util
-from datetime import datetime, timedelta
-import string
-
-import matplotlib
-matplotlib.use('agg')
-import pylab as plt
-
-from subprocess import Popen
 
 
 if len(sys.argv) < 2:

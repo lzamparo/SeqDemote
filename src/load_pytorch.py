@@ -1,5 +1,4 @@
 from torch.utils.data import Dataset
-import torch
 import h5py
 import numpy as np
 
@@ -23,7 +22,6 @@ class Embedded_k562_ATAC_train_dataset(Dataset):
     def __getitem__(self, index):
         
         features = self.h5f['/data/training/train_data'][index]
-        features
         labels = self.h5f['/labels/training/train_labels'][index]
         if self.transform is not None:
             features = self.transform(features)
@@ -159,7 +157,7 @@ class DNase_Train_Dataset(Dataset):
         features = self.h5f['/train_in'][index]
         label = self.h5f['/train_out'][index]
         if self.transform is not None:
-            features = self.transfor(features)
+            features = self.transform(features)
         return features, label
     
     def __len__(self):
@@ -181,7 +179,7 @@ class DNase_Valid_Dataset(Dataset):
         features = self.h5f['/valid_in'][index]
         label = self.h5f['/valid_out'][index]
         if self.transform is not None:
-            features = self.transfor(features)
+            features = self.transform(features)
         return features, label
     
     def __len__(self):
@@ -218,7 +216,7 @@ class SubsequenceTransformer(object):
     def get_subsequence(self, sequence):
         ''' Helper function for subsampling '''
         
-        bases, _, cols = sequence.shape
+        _, _, cols = sequence.shape
         start = np.random.randint(0, cols - self.output_size) if cols - self.output_size > 0 else 0
         end = start + self.output_size
         subseq = sequence[:,:,start:end]
