@@ -101,7 +101,8 @@ class BindSpaceNet(nn.Module):
         return x_p1
 
 def get_additional_losses(net, hyperparams_dict):
-    return [tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'])]
+    ''' Return a list of additional terms for the loss function '''
+    return tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'])
 
 net = BindSpaceNet(num_factors=num_factors)
 net.apply(tmu.init_weights)

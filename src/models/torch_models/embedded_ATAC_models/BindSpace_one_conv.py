@@ -95,6 +95,7 @@ class BindSpaceNet(nn.Module):
         return x_p1
 
 def get_additional_losses(net, hyperparams_dict):
+    ''' Return a list of additional terms for the loss function '''
     return []
     
 net = BindSpaceNet(num_factors=num_factors)

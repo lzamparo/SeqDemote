@@ -72,7 +72,6 @@ class BindSpaceNet(nn.Module):
         # shrink the output before combining them?
         # - encourage a learned hierarchy of groups?
         
-        # want extra shrinkage here?  
         self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
         
         
@@ -105,9 +104,9 @@ class BindSpaceNet(nn.Module):
         return x_p2
 
 def get_additional_losses(net, hyperparams_dict):
-    additional_losses = [tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
-                                                      cuda=cuda)]
-    return additional_losses
+    ''' Return a list of additional terms for the loss function '''
+    return tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
+                                                      cuda=cuda)
     
 net = BindSpaceNet(num_factors=num_factors)
 net.apply(tmu.init_weights)

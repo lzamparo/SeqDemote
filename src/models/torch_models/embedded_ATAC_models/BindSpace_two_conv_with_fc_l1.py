@@ -141,7 +141,8 @@ def get_model_param_lists(net):
     return biases, weights, sparse_weights
 
 def get_additional_losses(net, hyperparams_dict):
-    return [torch_model_construction_utils.get_sparse_weights_penalty(net, hyperparams_dict['sparse_lambda'])]
+    ''' Return a list of additional terms for the loss function '''
+    return torch_model_construction_utils.get_sparse_weights_penalty(net, hyperparams_dict['sparse_lambda'])
 
 def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
     ''' Initialize the params, put together the arguments for the optimizer '''

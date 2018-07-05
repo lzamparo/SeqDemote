@@ -102,9 +102,10 @@ class BindSpaceNet(nn.Module):
 
 
 def get_additional_losses(net, hyperparams_dict):
+    ''' Return a list of additional terms for the loss function '''
     additional_losses = []
-    additional_losses.append(tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'],cuda=cuda))
-    additional_losses.append(tmu.get_sparse_weights_penalty(net, 
+    additional_losses.extend(tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'],cuda=cuda))
+    additional_losses.extend(tmu.get_sparse_weights_penalty(net, 
         sparse_lambda=hyperparams_dict['sparse_lambda'], 
         cuda=cuda))
     return additional_losses
