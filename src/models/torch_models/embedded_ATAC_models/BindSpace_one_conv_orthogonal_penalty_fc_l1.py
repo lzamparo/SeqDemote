@@ -107,7 +107,7 @@ def get_additional_losses(net, hyperparams_dict):
     additional_losses.append(tmu.get_sparse_weights_penalty(net, 
         sparse_lambda=hyperparams_dict['sparse_lambda'], 
         cuda=cuda))
-    return 
+    return additional_losses
 
     
 net = BindSpaceNet(num_factors=num_factors)

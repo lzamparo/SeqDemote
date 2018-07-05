@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from load_pytorch import Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_validation_dataset
 from load_pytorch import EmbeddingReshapeTransformer
+from utils import torch_model_construction_utils as tmu
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
 save_dir = "BindSpace_embedding_extension"
@@ -17,12 +18,21 @@ momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
-#cuda = True
+cuda = True
 
 learning_rate_schedule = {
 0: 0.005,
 10: 0.002,
 20: 0.0001}
+
+model_hyperparams_dict={'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+                        'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
+
+default_hyperparams={'weight_lambda': 5e-3,
+                     'bias_lambda': 5e-3,
+                     'orth_lambda': 10e-3}
+
 
 validate_every = 1
 save_every = 1
@@ -93,51 +103,22 @@ class BindSpaceNet(nn.Module):
         x_c2 = self.conv2(x_p1)
         x_p2 = self.pool2(x_c2)
         return x_p2
+
+def get_additional_losses(net, hyperparams_dict):
+    additional_losses = [tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
+                                                      cuda=cuda)]
+    return additional_losses
     
 net = BindSpaceNet(num_factors=num_factors)
+net.apply(tmu.init_weights)
 
+# Collect weight, bias parameters for regularization
+weights, biases, sparse_weights = tmu.get_model_param_lists(net)
 
-def init_weights(m, gain=nn.init.calculate_gain('relu')):
-    ''' Recursively initalizes the weights of a network. '''
-    
-    if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight)
-        m.bias.data.fill_(0.01)
-    
-    if isinstance(m, nn.Conv2d):
-        torch.nn.init.orthogonal_(m.weight, gain)
-        m.bias.data.fill_(0.1)
+# Initialize the params, put together arguments for optimizer
+additional_losses = get_additional_losses(net, default_hyperparams)
+optimizer, optimizer_param_dicts = tmu.initialize_optimizer(weights, biases, 
+    sparse_weights, 
+    default_hyperparams)
 
-net.apply(init_weights)
-
-weights, biases, sparse_weights, additional_losses = [], [], [], []
-for name, p in net.named_parameters():
-    if 'bias' in name:
-        biases += [p]
-        
-    elif 'sparse' in name:
-        sparse_weights += [p]
-    
-    else:
-        weights += [p]
-    
-    
-# Impose an additional decorrelative penalty on the conv filters
-orth_lambda = 1e-6
-for name, p in net.named_parameters():
-    if 'orth' in name and 'weight_v' in name:
-        p_flattened = p.view(p.size(0),-1)
-        WWt = torch.mm(p_flattened, torch.transpose(p_flattened,0,1))
-        WWt -= torch.Tensor(torch.eye(p_flattened.size(0)))
-        orth_loss = orth_lambda * WWt.sum()
-        
-additional_losses.append(orth_loss)
-  
-# Initialize the params, put together the arguments for the optimizer        
-optimizer = torch.optim.Adam
-optimizer_param_dicts = [
-        {'params': weights, 'weight_decay': 5e-3},
-        {'params': biases, 'weight_decay': 5e-3},
-        {'params': sparse_weights, 'weight_decay': 10e-3}            
-                    ]
 optimizer_kwargs = {'lr': learning_rate_schedule[0]}
