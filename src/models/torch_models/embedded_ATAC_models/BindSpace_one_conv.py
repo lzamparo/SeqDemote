@@ -64,15 +64,8 @@ class BindSpaceNet(nn.Module):
 
         conv_size = self._get_conv_output(input_size)
 
-        # I'm not sure I want to reshape the output of all conv-pool
-        # filters into one long vector; think it makes sense to do 
-        # something else; 
-        # - groups of locally connected layers to further
-        # shrink the output before combining them?
-        # - encourage a learned hierarchy of groups?
-        
-        # want extra shrinkage here?  
-        self.sparse_fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
+         
+        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
         
         
     def forward(self, input):
@@ -82,7 +75,7 @@ class BindSpaceNet(nn.Module):
         # flatten layer
         x = x.view(x.size(0), -1)
         
-        x = self.relu(self.sparse_fc1(x))
+        x = self.relu(self.fc1(x))
         
         return x
     
@@ -111,7 +104,7 @@ net.apply(tmu.init_weights)
 weights, biases, sparse_weights = tmu.get_model_param_lists(net)
 
 # Initialize the params, put together the arguments for the optimizer
-additional_losses, get_additional_losses(net, default_hyperparams)
+additional_losses = get_additional_losses(net, default_hyperparams)
 optimizer, optimizer_param_dicts = tmu.initialize_optimizer(weights, biases, 
     sparse_weights, 
     default_hyperparams)

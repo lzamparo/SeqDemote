@@ -28,7 +28,7 @@ def validation_ap_objective(suggestion, model_module):
     hyperparameters for optimizer give by suggestion '''
     
     print("...Build model")
-    model = torch_model_construction_utils.reinitialize_model()
+    model = torch_model_construction_utils.reinitialize_model(model_module.BindSpaceNet)
     
     print("...number of parameters: ", train_utils.count_params(model.parameters()))
     print("...layer output shapes:")

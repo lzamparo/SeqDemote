@@ -71,7 +71,7 @@ class BindSpaceNet(nn.Module):
         # shrink the output before combining them?
         # - encourage a learned hierarchy of groups?
          
-        self.sparse_fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
+        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
         
         
     def forward(self, input):
@@ -81,7 +81,7 @@ class BindSpaceNet(nn.Module):
         # flatten layer
         x = x.view(x.size(0), -1)
         
-        x = self.relu(self.sparse_fc1(x))
+        x = self.relu(self.fc1(x))
         
         return x
     

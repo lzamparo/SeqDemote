@@ -62,14 +62,16 @@ def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
 
     weight_lambda = hyperparams_dict['weight_lambda']
     bias_lambda = hyperparams_dict['bias_lambda']
-    sparse_lambda = hyperparams_dict['sparse_lambda']
+    if sparse_weights:
+        sparse_lambda = hyperparams_dict['sparse_lambda']
     
     optimizer = torch.optim.Adam
     optimizer_param_dicts = [
         {'params': weights, 'weight_decay': weight_lambda},
-            {'params': biases, 'weight_decay': bias_lambda},
-            {'params': sparse_weights, 'weight_decay': sparse_lambda}            
-    ]
+            {'params': biases, 'weight_decay': bias_lambda}
+                        ]
+    if sparse_weights:
+        optimizer_param_dicts.append({'params': sparse_weights, 'weight_decay': sparse_lambda})
     return optimizer, optimizer_param_dicts
 
 def get_sparse_weights_penalty(net, sparse_lambda=1e-6, cuda=True):
@@ -78,7 +80,7 @@ def get_sparse_weights_penalty(net, sparse_lambda=1e-6, cuda=True):
     sparse_penalties = []
     for name, p in net.named_parameters():
         if 'weight_v' in name:
-            L1_loss = sparsity_lambda * (torch.abs(p)).sum()
+            L1_loss = sparse_lambda * (torch.abs(p)).sum()
             sparse_penalties.append(L1_loss)        
     return sparse_penalties
 
