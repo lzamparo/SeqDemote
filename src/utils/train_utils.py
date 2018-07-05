@@ -2,7 +2,7 @@ import numpy as np
 import gzip
 import os
 from collections import OrderedDict
-from sklearn.metrics import roc_auc_score, average_precision_score, f1_score
+from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, matthews_corrcoef
 
 
 ### Weak AggMo implementation attempt.   
@@ -170,6 +170,25 @@ def mt_avg_f1_score(y, y_hat, average=True):
     else:
         return f1_scores
 
+def mt_avg_mcc(y, y_hat, average=True):
+    ''' 
+    multi-task MCC score: unweighted MCC scores
+    y_hat := predicted labels
+    y := actual labels
+    '''
+    if not y_hat.shape == y.shape:
+        print("Error in MCC score: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+        return -1
+    mcc_scores = []
+    for targets, preds in zip(y.transpose(), y_hat.transpose()):
+        mcc_scores.append(matthews_corrcoef(targets, preds))
+    
+    if average:
+        return np.mean(mcc_scores)
+    else:
+        return mcc_scores
+    
+    
 ### Manage the learning rate schedules
 def log_lr_schedule(num_chunks_train, updates=4, base=0.02):
     ls = np.logspace(0.0, np.round(np.log10(num_chunks_train)), num = updates)

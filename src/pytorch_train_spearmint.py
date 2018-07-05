@@ -23,7 +23,7 @@ from subprocess import Popen
 from utils import torch_model_construction_utils
 
 
-def validation_aupr_objective(suggestion, model_module):
+def validation_ap_objective(suggestion, model_module):
     ''' Instantiate the network in the model_module, with 
     hyperparameters for optimizer give by suggestion '''
     
@@ -48,7 +48,6 @@ def validation_aupr_objective(suggestion, model_module):
     if hasattr(model_module, 'cuda'):
         import torch
         cuda = model_module.cuda and torch.cuda.is_available()
-        print('DEBUG: cuda is :', cuda)
     else:
         cuda = False
         
@@ -72,8 +71,10 @@ def validation_aupr_objective(suggestion, model_module):
     print("...setting up logging for losses ")
     losses_train = []
     losses_valid_log = []
-    losses_valid_aupr = []
-        
+    losses_valid_ap = []
+    losses_valid_mcc = []
+    losses_valid_f1 = []
+    
     print("...Loading the data", flush=True)
     if hasattr(model_module, 'batch_size'):
         batch_size = model_module.batch_size
@@ -180,15 +181,20 @@ def validation_aupr_objective(suggestion, model_module):
                 if cuda:
                     y_pred = y_pred.cpu()
                 valid_outputs.append(y_pred.data.numpy())
+            
                 
-            aupr = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
-            print("    validation aupr:\t {0:.4f}.".format(aupr * 100))
-            losses_valid_aupr.append(aupr)
-            
-            
-            
-            
-    return max(losses_valid_aupr)     
+            avg_precision = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
+            print("    validation average precision:\t {0:.4f}.".format(avg_precision * 100))
+            avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(
+                valid_outputs))
+            print("    validation average f1 score:\t {0:.4f}.".format(avg_f1 * 100))
+            avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(
+                valid_outputs))
+            print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
+            losses_valid_log.append[np.mean(losses)]
+            losses_valid_ap.append(avg_precision)
+               
+    return max(losses_valid_ap)     
 
 
 if len(sys.argv) < 2:
@@ -214,7 +220,7 @@ for n in range(5):
     suggestion = ss.suggest_random()
     
     # Retrieve an objective value for these parameters
-    value = validation_aupr_objective(suggestion, model_module)
+    value = validation_ap_objective(suggestion, model_module)
     print("Random trial {}: {} -> {}".format(n + 1, suggestion, value))
     
     # Update the optimizer on the result
@@ -227,7 +233,7 @@ for n in range(20):
     suggestion = ss.suggest()
     
     # Get an objective value
-    value = validation_aupr_objective(suggestion, model_module)
+    value = validation_ap_objective(suggestion, model_module)
     print("GP trial {}: {} -> {}".format(n + 1, suggestion, value))
     
     # Update the optimizer on the result
