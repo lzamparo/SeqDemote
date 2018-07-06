@@ -180,10 +180,7 @@ def validation_ap_objective(suggestion, model_module):
             print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
             losses_valid_log.append(np.mean(losses))
             losses_valid_ap.append(avg_precision)
-               
-    # tidy up datasets
-    train_dataset.close()
-    valid_dataset.close()    
+                
     return max(losses_valid_ap)     
 
 
@@ -231,3 +228,7 @@ for n in range(20):
     best_parameters, best_objective = ss.get_best_parameters()
     print("Best parameters {} for objective {}".format(best_parameters, best_objective))
 
+
+# Tidy up datasets
+model_module.train_dataset.close()
+model_module.valid_dataset.close()   

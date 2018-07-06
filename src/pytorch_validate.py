@@ -1,5 +1,6 @@
 import sys
 import os
+import torch
 import importlib.util
 
 import numpy as np
@@ -66,8 +67,10 @@ for batch_idx, (x, y) in enumerate(valid_loader):
     valid_outputs.append(y_pred.data.numpy())
     
 print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-aupr = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+ap = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 
 # Save the results to file
 filename = os.path.basename(model_config)

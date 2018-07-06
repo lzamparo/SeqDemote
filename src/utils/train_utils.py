@@ -96,7 +96,7 @@ def log_losses(y, t, eps=1e-15):
         t = one_hot(t)
 
     y = np.clip(y, eps, 1 - eps)
-    losses = -np.sum(t * np.log(y), axis=1)
+    losses = 1. * np.sum(t * np.log(y), axis=1)
     return losses
 
 def log_loss(y, t, eps=1e-15):
@@ -175,7 +175,7 @@ def mt_avg_f1_score(y, y_hat, average=True):
         if not (np.all(preds > 0.0) and np.all(preds < 1.0)):
             f1_scores.append(f1_score(targets, thresholded(preds)))
         else:
-            fi_scores.append(f1_score(targets, preds))
+            f1_scores.append(f1_score(targets, preds))
     if average:
         return np.mean(f1_scores)
     else:
