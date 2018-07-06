@@ -172,10 +172,8 @@ def mt_avg_f1_score(y, y_hat, average=True):
         return -1
     f1_scores = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        if not (np.all(preds > 0.0) and np.all(preds < 1.0)):
-            f1_scores.append(f1_score(targets, thresholded(preds)))
-        else:
-            f1_scores.append(f1_score(targets, preds))
+        f1_scores.append(f1_score(targets, thresholded(preds)))
+    
     if average:
         return np.mean(f1_scores)
     else:
@@ -192,11 +190,8 @@ def mt_avg_mcc(y, y_hat, average=True):
         return -1
     mcc_scores = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        if not (np.all(preds > 0.0) and np.all(preds < 1.0)):
-            mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
-        else:
-            mcc_scores.append(matthews_corrcoef(targets, preds))
-    
+        mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
+        
     if average:
         return np.mean(mcc_scores)
     else:

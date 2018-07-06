@@ -165,9 +165,11 @@ def validation_ap_objective(suggestion, model_module):
                 if (batch_idx + 1) % 10 == 0:
                     print("validation batch ", batch_idx, " : ", loss.data)
                 losses.append(loss.data)
+                
                 if cuda:
                     y_pred = y_pred.cpu()
-                valid_outputs.append(y_pred.data.numpy())
+                y_pred_sigmoid = nn.functional.sigmoid(y_pred)    
+                valid_outputs.append(y_pred_sigmoid.data.numpy())
             
                 
             avg_precision = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
