@@ -4,7 +4,7 @@
 #BSUB -gpu "num=1"
 #BSUB -n 2
 #BSUB -R "rusage[mem=4] span[ptile=2]"
-#BSUB -W 23:00
+#BSUB -W 36:00
 #BSUB -o %J.stdout
 #BSUB -eo %J.stderr
 
