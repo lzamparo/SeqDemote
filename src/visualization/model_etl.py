@@ -51,7 +51,7 @@ def pkl_to_training_loss_df(model_dir):
     return pd.concat(dfs_tloss)
 
 
-def o_to_df(model_dir):
+def o_to_df(model_dir, model_regex='spearmint_.+\.o[\d]+', lstrip=None, rstrip=None):
     ''' Perform ETL on all output files in a specified directory (that exist as .o* files), transforms them into a tidy formatted DataFrame. '''
     try:
         os.chdir(os.path.expanduser(model_dir))
@@ -60,22 +60,34 @@ def o_to_df(model_dir):
         exit(1)
     
     # grab files, get the names, validation errors per GP trial
-    outfile_regex = re.compile('spearmint_.+\.o[\d]+')
+    outfile_regex = re.compile(model_regex)
     model_files = [f for f in os.listdir('.') if re.match(outfile_regex, f)]
-    model_dfs = [parse_spearmint_output(f) for f in model_files]
+    model_dfs = [parse_spearmint_output(f, lstrip, rstrip) for f in model_files]
     return pd.concat(model_dfs)
     
     
-def parse_spearmint_output(model_file):
+def parse_spearmint_output(model_file, lstrip=None, rstrip=None):
     ''' Helper function to parse Spearmint output, '''
     trial_values = []
     with open(model_file, 'r') as f:
         for line in f:
             if line.startswith('Experiment'):
-                model_name = line.strip().split()[-1]
-                model_name = model_name.split('.')[0]
+                model_name = extract_model_name(line, lstrip, rstrip)
             if line.startswith('GP'):
                 trial_values.append(float(line.strip().split()[-1]))
     num_rows = len(trial_values)
     df_gp_loss = pd.DataFrame.from_items([('model', [model_name] * num_rows), ('trial', [i for i in range(num_rows)]), ('measure',['AUROC '] * num_rows), ('score', trial_values)])
     return df_gp_loss
+
+
+def extract_model_name(l, lstrip=None, rstrip=None):
+    ''' strip model name from a longer line which contains the model name,
+    potentially pruning off other text from the name of the python module
+    that contains the identifying model name. '''
+    model_name = l.strip().split()[-1]
+    model_name = model_name.split('.')[0]
+    if lstrip:
+        model_name = model_name.lstrip(lstrip)
+    if rstrip:
+        model_name = model_name.rstrip(rstrip)
+    return model_name

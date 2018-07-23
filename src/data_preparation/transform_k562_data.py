@@ -8,7 +8,7 @@ data_dir_prefix = os.path.expanduser(data_dir)
 
 # get file, file handles
 old_file = os.path.join(data_dir_prefix, 'K562_embed.h5')
-new_file = os.path.join(data_dir_prefix,'K562_embed_TV_split.h5')
+new_file = os.path.join(data_dir_prefix,'K562_embed_TV_annotated_split.h5')
 of_handle = h5py.File(old_file,'r')
 nf_handle = h5py.File(new_file,'w')
 
@@ -18,18 +18,23 @@ of_handle.close()
 # choose amount of data to partition, get the data into memory
 r_size, c_size = whole_mat.shape
 p = 0.1
-indexes = np.random.binomial(1, p, c_size)
+indices = np.random.binomial(1, p, c_size)
 
 # prepare new file for writing
+data_group = nf_handle.create_group('/data')
+peak_index = data_group.create_dataset('peak_index', indices.shape, dtype='i8')
 train_group = nf_handle.create_group('/data/training')
 valid_group = nf_handle.create_group('/data/validation')
 label_train_group = nf_handle.create_group('/labels/training')
 label_valid_group = nf_handle.create_group('/labels/validation')
-valid_examples = indexes.sum()
+valid_examples = indices.sum()
 train_examples = c_size - valid_examples
 train_dset = train_group.create_dataset('train_data', (train_examples,r_size), dtype='f8')
 valid_dset = valid_group.create_dataset('valid_data', (valid_examples,r_size), dtype='f8')
 print("Choosing ", train_examples, " for training, ", valid_examples, " for validation")
+
+# write the peak ids to the peak_index for cross referencing with fasta files
+peak_index[:] = indices[:]
 
 # prepare labels for reading
 def parse_line(l):
@@ -63,7 +68,7 @@ print("Labeled columns of labels with TF labels")
 valid_count = 0    
 train_count = 0
 print("Writing to structured h5file...")
-for n, (flip, label) in enumerate(zip(indexes, label_data)):
+for n, (flip, label) in enumerate(zip(indices, label_data)):
     if flip == 0:
         train_dset[train_count,:] = whole_mat[:, n] # write the data
         label_train_dset[train_count, :] = label_data[n, :] # write the labels
@@ -79,7 +84,7 @@ print("Done")
 # Test: are the validation examples the same?
 print("Testing to see if validation data is the same between both sets:")
 valid_examples_from_nf = valid_dset[:]
-valid_examples_from_of = whole_mat[:,indexes.astype('bool')]
+valid_examples_from_of = whole_mat[:,indices.astype('bool')]
 assert(np.allclose(valid_examples_from_nf,valid_examples_from_of.transpose()))
 print("Test passed!")
 
