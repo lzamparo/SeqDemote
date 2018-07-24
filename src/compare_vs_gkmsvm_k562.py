@@ -103,6 +103,7 @@ TF_list = ["CEBPB","CEBPG", "CREB3L1", "CTCF",
            "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]
 data_h5_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_annotated_split.h5")
 fasta_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_atac.fasta")
+gkm_prefix = "~/projects/tools/lsgkm/bin/"
 
 # get the training, validation peak indices
 with h5py.File(data_h5_path,'r') as h5:
@@ -110,7 +111,6 @@ with h5py.File(data_h5_path,'r') as h5:
     training_labels = get_TF_labels_from_h5(h5, "/labels/training/train_labels", TF_list)
     validation_labels = get_TF_labels_from_h5(h5, "/labels/validation/valid_labels", TF_list)
 
-validation_gkm_factor_dict = {}
 results_prefix = os.path.expanduser("~/projects/SeqDemote/results/gkmsvm_comparison")
 for pos,f in enumerate(TF_list):
     
@@ -137,14 +137,14 @@ for pos,f in enumerate(TF_list):
     model_path = Path(model_name + ".model.txt")
     if not model_path.exists():
         # run gkmtrain
-        run_gkmtrain(train_peak_fname, train_flank_fname, model_name)
+        run_gkmtrain(train_peak_fname, train_flank_fname, model_name, gkm_prefix=gkm_prefix)
     
     # validate the model
     valid_peaks_predictions_path = os.path.join(results_prefix,f + "_predicted_peaks.txt")
     valid_flanks_predictions_path = os.path.join(results_prefix,f + "_predicted_flanks.txt")
-    run_gkmpredict(valid_peak_fname, valid_peaks_predictions_path, model_name + ".model.txt")
+    run_gkmpredict(valid_peak_fname, valid_peaks_predictions_path, model_name + ".model.txt", gkm_prefix=gkm_prefix)
     valid_peak_preds = gather_gkm_predictions(valid_peaks_predictions_path)
-    run_gkmpredict(valid_flank_fname, valid_flanks_predictions_path, model_name + ".model.txt")
+    run_gkmpredict(valid_flank_fname, valid_flanks_predictions_path, model_name + ".model.txt", gkm_prefix=gkm_prefix)
     valid_flank_preds = gather_gkm_predictions(valid_flanks_predictions_path)
     
     pos_train.close()
