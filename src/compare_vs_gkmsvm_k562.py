@@ -1,3 +1,4 @@
+import argparse
 import os
 import h5py
 import numpy as np
@@ -57,21 +58,26 @@ def encode_sequences_into_fasta(seq_file, pos_t, neg_t, pos_v, neg_v,
                 train_index += 1                
         
             
-def run_gkmtrain(positive_file, negative_file, model_prefix, gkm_prefix="~/projects/fixes/lsgkm/bin"):
+def run_gkmtrain(positive_file, 
+                 negative_file, 
+                 model_prefix,
+                 d_mismatch=2,
+                 kernel_type=4,
+                 gkm_prefix="~/projects/fixes/lsgkm/bin"):
     ''' call out to gkmtrain '''
     
     threads = 4
     word_len = 8
     kolumns = 5
-    d_mismatches = 2
-    mem_cache = 1000.0
+    mem_cache = 4000.0
     gkm_prefix_path = os.path.expanduser(gkm_prefix)
     gkm_train_cmd = os.path.join(gkm_prefix_path, "gkmtrain")
-    command = [str(s) for s in [gkm_train_cmd, 
+    command = [str(s) for s in [gkm_train_cmd,
+                                '-t', kernel_type,
                                 '-T', threads, 
                                 '-l', word_len, 
                                 '-k', kolumns,
-                                '-d', d_mismatches, 
+                                '-d', d_mismatch, 
                                 '-m', mem_cache, 
                                 positive_file, 
                                 negative_file, 
@@ -97,6 +103,17 @@ def gather_gkm_predictions(output_file):
     y_hat = np.array([line.split()[-1] for line in lines], dtype=float)
     return y_hat
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-k", type=int, default=4, help="select gkm-svm kernel type")
+parser.add_argument("-d", type=int, default=2, help="select number of mismathces allowed")
+parser.add_argument("-e", type=str, help="specify subdirectory below results_prefix for the experimental results")
+args = parser.parse_args()
+
+kernel_type = args.k
+mismatches = args.d
+experiment = args.e
+    
 TF_list = ["CEBPB","CEBPG", "CREB3L1", "CTCF",
            "CUX1","ELK1","ETV1","FOXJ2","KLF13",
            "KLF16","MAFK","MAX","MGA","NR2C2",
@@ -111,7 +128,7 @@ with h5py.File(data_h5_path,'r') as h5:
     training_labels = get_TF_labels_from_h5(h5, "/labels/training/train_labels", TF_list)
     validation_labels = get_TF_labels_from_h5(h5, "/labels/validation/valid_labels", TF_list)
 
-results_prefix = os.path.expanduser("~/projects/SeqDemote/results/gkmsvm_comparison")
+results_prefix = os.path.expanduser(os.path.join("~/projects/SeqDemote/results/gkmsvm_comparison",experiment))
 for pos,f in enumerate(TF_list):
     
     # for now: easiest is to train a per-factor model which is one vs all non-shared positives
@@ -137,7 +154,12 @@ for pos,f in enumerate(TF_list):
     model_path = Path(model_name + ".model.txt")
     if not model_path.exists():
         # run gkmtrain
-        run_gkmtrain(train_peak_fname, train_flank_fname, model_name, gkm_prefix=gkm_prefix)
+        run_gkmtrain(train_peak_fname, 
+                     train_flank_fname, 
+                     model_name,
+                     d_mismatch=mismatches,
+                     kernel_type=kernel_type,
+                     gkm_prefix=gkm_prefix)
     
     # validate the model
     valid_peaks_predictions_path = os.path.join(results_prefix,f + "_predicted_peaks.txt")
