@@ -25,7 +25,8 @@ learning_rate_schedule = {
 10: 0.002,
 20: 0.0001}
 
-model_hyperparams_dict={'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
+model_hyperparams_dict={'first_filters': {'type': 'int', 'min': 20, 'max': 200},
+                        'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
 
@@ -47,12 +48,12 @@ label_cast = lambda y: torch.autograd.Variable(y).float()
 
 class BindSpaceNet(nn.Module):
     
-    def __init__(self, input_size=(1, 281, 300), num_factors=24):
+    def __init__(self, input_size=(1, 281, 300), num_factors=24, hyperparams_dict=default_hyperparams):
         
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
-        
-        self.orth_conv1 = nn.utils.weight_norm(nn.Conv2d(1, 20, (1,300)))
+        num_filters = hyperparams_dict['first_filters']
+        self.orth_conv1 = nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300)))
         self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
         
         # Here is where I should think about what makes sense as a region to
@@ -60,7 +61,7 @@ class BindSpaceNet(nn.Module):
         # kerlnel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
         
-        self.conv2 = nn.utils.weight_norm(nn.Conv2d(20,10,(30,1)))
+        self.conv2 = nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1)))
         self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
@@ -103,12 +104,17 @@ class BindSpaceNet(nn.Module):
         x_p2 = self.pool2(x_c2)
         return x_p2
 
+def reinitialize_model(num_factors=19,hyperparams_dict=default_hyperparams):
+    net = BindSpaceNet(num_factors=num_factors, hyperparams_dict)
+    net.apply(tmu.init_weights)
+    return net
+
 def get_additional_losses(net, hyperparams_dict):
     ''' Return a list of additional terms for the loss function '''
     return tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
                                                       cuda=cuda)
     
-net = BindSpaceNet(num_factors=num_factors)
+net = BindSpaceNet(num_factors=num_factors, default_hyperparams)
 net.apply(tmu.init_weights)
 
 # Collect weight, bias parameters for regularization

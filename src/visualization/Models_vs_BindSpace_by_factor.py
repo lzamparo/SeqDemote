@@ -12,7 +12,7 @@ factors = ["CEBPB","CEBPG", "CREB3L1", "CTCF","CUX1","ELK1","ETV1",
 model_dir = "~/projects/SeqDemote/results/BindSpace_embedding_extension/results_per_factor"
 
 ### ls-gkmsvm results
-gkmsvm_results_dir = "~/projects/SeqDemote/results/gkmsvm_comparison"
+gkmsvm_results_dir = "~/projects/SeqDemote/results/gkmsvm_comparison/"
 
 def gather_gkm_predictions(output_file):
     with open(output_file,'r') as f:
@@ -21,23 +21,27 @@ def gather_gkm_predictions(output_file):
     return y_hat
 
 # read ls-gkmsvm results, calc AP, read results into tidy df
-os.chdir(os.path.expanduser(gkmsvm_results_dir))
-ap_list = []
-for f in factors:
-    # read peaks, flanks
-    peaks_predictions = gather_gkm_predictions(f + "_predicted_peaks.txt")
-    flanks_predictions = gather_gkm_predictions(f + "_predicted_flanks.txt")
-    y_hat = np.hstack((peaks_predictions, flanks_predictions))
-    # calculate AP, store
-    peaks_labels = np.ones_like(peaks_predictions)
-    flanks_labels = np.zeros_like(flanks_predictions)
-    y = np.hstack((peaks_labels, flanks_labels))
-    ap = average_precision_score(y, y_hat)
-    ap_list.append(ap)
+gkmsvm_dfs = []
+exp_root = os.path.expanduser(gkmsvm_results_dir)
+for model in os.listdir(exp_root):
+    os.chdir(os.path.join(exp_root, model))
+    ap_list = []
+    for f in factors:
+        # read peaks, flanks
+        peaks_predictions = gather_gkm_predictions(f + "_predicted_peaks.txt")
+        flanks_predictions = gather_gkm_predictions(f + "_predicted_flanks.txt")
+        y_hat = np.hstack((peaks_predictions, flanks_predictions))
+        # calculate AP, store
+        peaks_labels = np.ones_like(peaks_predictions)
+        flanks_labels = np.zeros_like(flanks_predictions)
+        y = np.hstack((peaks_labels, flanks_labels))
+        ap = average_precision_score(y, y_hat)
+        ap_list.append(ap)
+        
+    gkm_model_name_list = [model for l in range(len(factors))]
+    gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'AP': ap_list})
+    gkmsvm_dfs.append(gkmsvm_df)
     
-gkm_model_name_list = ['gkmsvm' for l in range(len(factors))]
-gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'AP': ap_list})
-
 # read bindspace results into tidy df
 os.chdir(os.path.expanduser(model_dir))
 results = open('bindspace_val_aupr.txt','r').readlines()
@@ -58,16 +62,18 @@ for f in [f for f in os.listdir('.') if f.startswith('one') or f.startswith('two
     df_list.append(pd.DataFrame.from_dict({'model': model_name_list, 'factor': factors, 'AP': aupr_list}))     
 
 df_list.append(bindspace_df)
-df_list.append(gkmsvm_df)
+df_list.extend(gkmsvm_dfs)
 dfs = pd.concat(df_list)
-    
-# Plot with flipped axes, and calculate the difference for each factor
 
+# save path
+save_path = "/Users/zamparol/projects/SeqDemote/results/BindSpace_embedding_extension/results_per_factor/gkmsvm_included/"
+
+# Plot with flipped axes, and calculate the difference for each factor
 p = gg.ggplot(gg.aes(y='AP', x='factor',color='model'), dfs)
 p = p + gg.geom_point()  
-p = p + gg.ggtitle("Validation AP by model, factor")
+p = p + gg.ggtitle("Validation AP by model")
 p = p + gg.coord_flip()
-p.save('individual_factor_comparison.pdf')
+p.save('individual_factor_comparison.pdf', path=save_path)
 
 
 # Plot improvement in AUPR by factor, re-formatting data to long format
@@ -112,7 +118,7 @@ q = q + gg.geom_point(gg.aes(x="Mean Improvement", y='factor'), size=3, stroke=0
 q = q + gg.ggtitle("Validation AP range by factor")
 q = q + gg.xlab("AP") 
 q = q + gg.ylab("factor")
-q.save('factor_relative_improvement.pdf')
+q.save('factor_relative_improvement.pdf', path=save_path)
 
 #p = p + gg.geom_vline(xintercept = divider, color='white', size=0.05)
 #p = p + gg.geom_text(data=mean_diffed_by_factor, mapping=gg.aes(x=spread_max, y='factor', label='AUPR'), inherit_aes=False, size=12, fontweight='bold', format_string='+{}')
