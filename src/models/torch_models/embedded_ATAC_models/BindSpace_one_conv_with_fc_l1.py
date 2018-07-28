@@ -9,7 +9,7 @@ from load_pytorch import Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_va
 from load_pytorch import EmbeddingReshapeTransformer
 from utils import torch_model_construction_utils as tmu
 
-data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_split.h5")
+data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_annotated_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19  
