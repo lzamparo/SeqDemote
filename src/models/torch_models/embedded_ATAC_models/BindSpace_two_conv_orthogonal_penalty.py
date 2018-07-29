@@ -30,7 +30,8 @@ model_hyperparams_dict={'first_filters': {'type': 'int', 'min': 20, 'max': 200},
                         'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
 
-default_hyperparams={'weight_lambda': 5e-3,
+default_hyperparams={'first_filters': 30,
+                     'weight_lambda': 5e-3,
                      'bias_lambda': 5e-3,
                      'orth_lambda': 10e-3}
 
