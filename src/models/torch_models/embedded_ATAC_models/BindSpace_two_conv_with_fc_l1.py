@@ -124,7 +124,7 @@ def get_additional_losses(net, hyperparams_dict):
 
 
 net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=default_hyperparams)
-net.apply(init_weights)    
+net.apply(tmu.init_weights)    
 
 # Collect weight, bias parameters for regularization
 weights, biases, sparse_weights = tmu.get_model_param_lists(net) 
