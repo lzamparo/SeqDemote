@@ -104,8 +104,8 @@ class BindSpaceNet(nn.Module):
         x_p2 = self.pool2(x_c2)
         return x_p2
 
-def reinitialize_model(num_factors=19,hyperparams_dict=default_hyperparams):
-    net = BindSpaceNet(num_factors=num_factors, hyperparams_dict)
+def reinitialize_model(num_factors=19, hyperparams_dict=default_hyperparams):
+    net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=hyperparams_dict)
     net.apply(tmu.init_weights)
     return net
 
@@ -114,7 +114,7 @@ def get_additional_losses(net, hyperparams_dict):
     return tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
                                                       cuda=cuda)
     
-net = BindSpaceNet(num_factors=num_factors, default_hyperparams)
+net = BindSpaceNet(num_factors=num_factors,hyperparams_dict=default_hyperparams)
 net.apply(tmu.init_weights)
 
 # Collect weight, bias parameters for regularization

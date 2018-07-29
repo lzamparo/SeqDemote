@@ -108,7 +108,7 @@ class BindSpaceNet(nn.Module):
         return x_p2
 
 def reinitialize_model(num_factors=19, hyperparams_dict=default_hyperparams):
-    net = BindSpaceNet(num_factors=num_factors, hyperparams_dict)
+    net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=hyperparams_dict)
     net.apply(tmu.init_weights)
     return net
 
@@ -121,7 +121,7 @@ def get_additional_losses(net, hyperparams_dict):
         cuda=cuda))
     return additional_losses    
     
-net = BindSpaceNet(num_factors=num_factors, default_hyperparams)
+net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=default_hyperparams)
 net.apply(tmu.init_weights)
 
 # Collect weights, biases.
