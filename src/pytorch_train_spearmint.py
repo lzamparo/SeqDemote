@@ -204,7 +204,7 @@ ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
 
 
 # Seed with 5 randomly chosen parameter settings
-for n in range(5):
+for n in range(15):
     # Get random parameter settings
     suggestion = ss.suggest_random()
     
@@ -215,8 +215,8 @@ for n in range(5):
     # Update the optimizer on the result
     ss.update(suggestion, value)
 
-# Run for 20 hyperparameter optimization trials
-for n in range(20):
+# Run for 40 hyperparameter optimization trials
+for n in range(40):
     
     # Get a suggestion from the optimizer
     suggestion = ss.suggest()
