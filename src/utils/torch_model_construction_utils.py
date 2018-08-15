@@ -1,8 +1,49 @@
 import torch
 import torch.nn as nn
 
+
+### FocalLoss (cf. arxiv:) to re-weight those w/ more uncertainty
+class FocalLoss(nn.Module):
+    
+    def __init__(self, reduce=True):
+        super(FocalLoss, self).__init__()
+        self.reduce = reduce
+        
+    def _get_weights(self, x, t, alpha, gamma):
+        '''
+        Helper to get the weights for focal loss calculation
+        '''
+        p = nn.functional.sigmoid(x)
+        p_t = p*t + (1 - p)*(1 - t)
+        alpha_t = alpha * t + (1 - alpha)*(1 - t)
+        w = alpha_t * (1 - p_t).pow(gamma)
+        return w
+    
+    def focal_loss(self, x, t, alpha, gamma):
+        '''
+        Focal Loss cf. arXiv:1708.02002
+        
+        Args:
+          x: (tensor) output from last layer of network
+          t: (tensor) targets in [0,1]
+          alpha: (float) class imbalance correction weight \in (0,1)
+          gamma: (float) amplification factor for uncertain classification
+          
+        Return:
+          (tensor) focal loss.
+        '''
+        ### Need a better visualization of this; maybe I can dump to a table and calculate 
+        ### the per-element loss, because I'm not sure my formulation is correct.
+        weights = self._get_weights(x, t, alpha, gamma)
+        return nn.functional.binary_cross_entropy_with_logits(x, t, weights, size_average=False, reduce=self.reduce)
+    
+    def forward(self, input, target, alpha=0.7, gamma=1.5):
+        return self.focal_loss(input, target, alpha, gamma)
+
+
 ### Functions that allow for re-initialization of model and
 ### optimizer to tune hyperparameters 
+
 
 def init_weights(m, gain=nn.init.calculate_gain('relu')):
     ''' Recursively initalizes the weights of a network. '''
