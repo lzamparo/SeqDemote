@@ -10,7 +10,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 from utils import torch_model_construction_utils as tmu
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_annotated_split.h5")
-save_dir = "BindSpace_embedding_extension"
+save_dir = "BindSpace_embedding_extension/focal_loss_models"
 
 num_factors = 19  
 batch_size = 128
@@ -40,7 +40,7 @@ default_hyperparams={'first_filters': 30,
 validate_every = 1
 save_every = 1
 
-train_loss = nn.BCEWithLogitsLoss(size_average=False)
+train_loss = tmu.FocalLoss()
 valid_loss = nn.BCEWithLogitsLoss(size_average=False)
 train_dataset = Embedded_k562_ATAC_train_dataset(data_path, transform=transformer)
 valid_dataset = Embedded_k562_ATAC_validation_dataset(data_path, transform=transformer)
@@ -49,41 +49,48 @@ label_cast = lambda y: torch.autograd.Variable(y).float()
 
 
 class BindSpaceNet(nn.Module):
-    
+
     def __init__(self, input_size=(1, 281, 300), num_factors=24, hyperparams_dict=default_hyperparams):
-        
+
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
         num_filters = hyperparams_dict['first_filters']
-        self.conv1 = nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300)))
+        self.orth_conv1 = nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300)))
         self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
-        
+
         # Here is where I should think about what makes sense as a region to
         # pool over: how much effetive sequence space do I want to consider?
         # kerlnel_size(1,3) gives me effectively 23 bases of consideration
         # Can also try Lp pooling for large P
-        
+
         self.conv2 = nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1)))
         self.pool2 = nn.MaxPool2d((4,1))
 
         conv_size = self._get_conv_output(input_size)
 
-    
-        self.fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
-        
-        
+        # I'm not sure I want to reshape the output of all conv-pool
+        # filters into one long vector; think it makes sense to do 
+        # something else; 
+        # - groups of locally connected layers to further
+        # shrink the output before combining them?
+        # - encourage a learned hierarchy of groups?
+
+        # want extra shrinkage here?  
+        self.sparse_fc1 = nn.utils.weight_norm(nn.Linear(conv_size, num_factors))
+
+
     def forward(self, input):
-        
-        x = self.pool1(self.relu(self.conv1(input)))
+
+        x = self.pool1(self.relu(self.orth_conv1(input)))
         x = self.pool2(self.relu(self.conv2(x)))
-        
+
         # flatten layer
         x = x.view(x.size(0), -1)
-        
-        x = self.relu(self.fc1(x))
-        
+
+        x = self.relu(self.sparse_fc1(x))
+
         return x
-    
+
     # helper function to calculate number of units to expect for 
     # FC layers
     def _get_conv_output(self, shape):
@@ -94,7 +101,7 @@ class BindSpaceNet(nn.Module):
         return n_size
 
     def _forward_features(self, x):
-        x_c1 = self.conv1(x)
+        x_c1 = self.orth_conv1(x)
         x_p1 = self.pool1(x_c1)
         x_c2 = self.conv2(x_p1)
         x_p2 = self.pool2(x_c2)
@@ -107,18 +114,23 @@ def reinitialize_model(num_factors=19, hyperparams_dict=default_hyperparams):
 
 def get_additional_losses(net, hyperparams_dict):
     ''' Return a list of additional terms for the loss function '''
-    return []
-    
+    additional_losses = []
+    additional_losses.extend(tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'],cuda=cuda))
+    additional_losses.extend(tmu.get_sparse_weights_penalty(net, 
+                                                            sparse_lambda=hyperparams_dict['sparse_lambda'], 
+        cuda=cuda))
+    return additional_losses    
+
 net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=default_hyperparams)
 net.apply(tmu.init_weights)
 
-# Collect weight, bias parameters for regularization
+# Collect weights, biases.
 weights, biases, sparse_weights = tmu.get_model_param_lists(net)
 
-# Initialize the params, put together the arguments for the optimizer
-additional_losses = get_additional_losses(net, default_hyperparams)
-optimizer, optimizer_param_dicts = tmu.initialize_optimizer(weights, biases, 
-    sparse_weights, 
-    default_hyperparams)
-
+# Initialize params, build optimizer
+aditional_losses = get_additional_losses(net, default_hyperparams)
+optimizer, optimizer_param_dicts = tmu.initialize_optimizer(weights, 
+                                                            biases, 
+                                                            sparse_weights, 
+                                                            default_hyperparams)
 optimizer_kwargs = {'lr': learning_rate_schedule[0]}

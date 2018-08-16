@@ -5,21 +5,23 @@ import torch.nn as nn
 ### FocalLoss (cf. arxiv:) to re-weight those w/ more uncertainty
 class FocalLoss(nn.Module):
     
-    def __init__(self, reduce=True):
+    def __init__(self, reduce=True, gamma=1.5, alpha=0.7):
         super(FocalLoss, self).__init__()
         self.reduce = reduce
+        self.gamma = gamma
+        self.alpha = alpha
         
-    def _get_weights(self, x, t, alpha, gamma):
+    def _get_weights(self, x, t):
         '''
         Helper to get the weights for focal loss calculation
         '''
         p = nn.functional.sigmoid(x)
         p_t = p*t + (1 - p)*(1 - t)
-        alpha_t = alpha * t + (1 - alpha)*(1 - t)
-        w = alpha_t * (1 - p_t).pow(gamma)
+        alpha_t = self.alpha * t + (1 - self.alpha)*(1 - t)
+        w = alpha_t * (1 - p_t).pow(self.gamma)
         return w
     
-    def focal_loss(self, x, t, alpha, gamma):
+    def focal_loss(self, x, t):
         '''
         Focal Loss cf. arXiv:1708.02002
         
@@ -34,11 +36,11 @@ class FocalLoss(nn.Module):
         '''
         ### Need a better visualization of this; maybe I can dump to a table and calculate 
         ### the per-element loss, because I'm not sure my formulation is correct.
-        weights = self._get_weights(x, t, alpha, gamma)
+        weights = self._get_weights(x, t)
         return nn.functional.binary_cross_entropy_with_logits(x, t, weights, size_average=False, reduce=self.reduce)
     
-    def forward(self, input, target, alpha=0.7, gamma=1.5):
-        return self.focal_loss(input, target, alpha, gamma)
+    def forward(self, input, target):
+        return self.focal_loss(input, target)
 
 
 ### Functions that allow for re-initialization of model and
