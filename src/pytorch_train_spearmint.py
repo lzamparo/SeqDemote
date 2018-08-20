@@ -21,14 +21,22 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     '''
     
     print("...Build model")
-    model = torch_model_construction_utils.reinitialize_model(model_module.BindSpaceNet)
+    try:
+        model = model_module.reinitialize_model(hyperparams_dict=suggestion)
+    except AttributeError:
+        model = torch_model_construction_utils.reinitialize_model(model_module.BindSpaceNet)
+    # Bug, bug buggy bug!
     
     print("...number of parameters: ", train_utils.count_params(model.parameters()))
     print("...layer output shapes:")
     print(model)
     
     print("...setting up loss functions ", flush=True)
-    training_loss = model_module.train_loss
+    try:
+        training_loss = model_module.get_train_loss(suggestion)
+    except AttributeError:
+        training_loss = model_module.train_loss
+        
     valid_loss = model_module.valid_loss
         
     print("...setting the learning rate schedule ", flush=True)

@@ -25,12 +25,16 @@ learning_rate_schedule = {
 10: 0.002,
 20: 0.0001}
 
-model_hyperparams_dict={'first_filters': {'type': 'int', 'min': 20, 'max': 200},
+model_hyperparams_dict={'gamma': {'type': 'float', 'min': 1.0, 'max': 5.0},
+                        'alpha': {'type': 'float', 'min': 0.1, 'max': 0.9},
+                        'first_filters': {'type': 'int', 'min': 20, 'max': 200},
                         'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
 
-default_hyperparams={'first_filters': 30,
+default_hyperparams={'gamma': 2.0,
+                     'alpha': 0.7,
+                     'first_filters': 30,
                      'weight_lambda': 5e-3,
                      'bias_lambda': 5e-3,
                      'orth_lambda': 10e-3}
@@ -39,8 +43,6 @@ default_hyperparams={'first_filters': 30,
 validate_every = 1
 save_every = 1
 
-train_loss = tmu.FocalLoss()
-valid_loss = nn.BCEWithLogitsLoss(size_average=False)
 train_dataset = Embedded_k562_ATAC_train_dataset(data_path, transform=transformer)
 valid_dataset = Embedded_k562_ATAC_validation_dataset(data_path, transform=transformer)
 data_cast = lambda x: torch.autograd.Variable(x).float()
@@ -114,6 +116,13 @@ def get_additional_losses(net, hyperparams_dict):
     ''' Return a list of additional terms for the loss function '''
     return tmu.orthogonal_filter_penalty(net, hyperparams_dict['orth_lambda'], 
                                          cuda=cuda)
+
+def get_train_loss(hyperparams_dict=default_hyperparams):
+    ''' Set up the focal loss for training '''
+    return tmu.FocalLoss(gamma=hyperparams_dict['gamma'], alpha=hyperparams_dict['alpha'])
+    
+train_loss = get_train_loss()
+valid_loss = nn.BCEWithLogitsLoss(size_average=False)
 
 net = BindSpaceNet(num_factors=num_factors,hyperparams_dict=default_hyperparams)
 net.apply(tmu.init_weights)
