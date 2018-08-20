@@ -10,7 +10,7 @@ from load_pytorch import EmbeddingReshapeTransformer
 from utils import torch_model_construction_utils as tmu
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_annotated_split.h5")
-save_dir = "BindSpace_embedding_extension/focal_loss_models"
+save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19  
 batch_size = 128

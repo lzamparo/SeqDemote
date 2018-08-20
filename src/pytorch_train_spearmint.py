@@ -14,9 +14,11 @@ import simple_spearmint
 from utils import torch_model_construction_utils
 
 
-def validation_ap_objective(suggestion, model_module):
+def validation_ap_objective(suggestion, model_module, model_name, trial_num, outfile=None):
     ''' Instantiate the network in the model_module, with 
-    hyperparameters for optimizer give by suggestion '''
+    hyperparameters for optimizer give by suggestion.
+    Write out the results of the trial if outfile is provided
+    '''
     
     print("...Build model")
     model = torch_model_construction_utils.reinitialize_model(model_module.BindSpaceNet)
@@ -63,6 +65,7 @@ def validation_ap_objective(suggestion, model_module):
     losses_train = []
     losses_valid_log = []
     losses_valid_ap = []
+    losses_valid_f1 = []
     losses_valid_mcc = []
     
     print("...Loading the data", flush=True)
@@ -152,7 +155,7 @@ def validation_ap_objective(suggestion, model_module):
             valid_labels = []
             losses = []
             
-            model.eval()  # set model to evaluation mode: turn off dropout
+            model.eval()  # set model to evaluation mode
             
             for batch_idx, (x, y) in enumerate(valid_loader):
                 valid_labels.append(y.numpy())
@@ -182,7 +185,18 @@ def validation_ap_objective(suggestion, model_module):
             print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
             losses_valid_log.append(np.mean(losses))
             losses_valid_ap.append(avg_precision)
-                
+            losses_valid_f1.append(avg_f1)
+            losses_valid_mcc.append(avg_mcc)
+            
+    if outfile is not None:
+        ap_str = "{0:.4f}".format(max(losses_valid_ap) * 100)
+        print(','.join([model_name, trial_num, 'AP', ap_str]), file=outfile)
+        f1_str = "{0:.4f}".format(max(losses_valid_f1) * 100)
+        print(','.join([model_name, trial_num, 'F1', f1_str]), file=outfile)
+        mcc_str = "{0:.4f}".format(max(losses_valid_mcc) * 100)
+        print(','.join([model_name, trial_num, 'MCC', mcc_str]), file=outfile)
+        
+        
     return max(losses_valid_ap)     
 
 
@@ -191,44 +205,49 @@ if len(sys.argv) < 2:
 
 model_config = sys.argv[1]
 model_path_name = os.path.join(os.path.expanduser(os.getcwd()),'models',model_config)
+model_name = model_config.split('/')[-1].strip(".py")
 spec = importlib.util.spec_from_file_location(model_config, model_path_name)
 model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
 expid = accounting.generate_expid(model_config)
 expid = expid.split('/')[-1]
-
+save_file = os.path.join(train_utils.find_project_root(),"results", model_module.save_dir, "spearmint_searches", expid)
     
 print("Experiment ID: ", expid)
 model_hyperparams_dict = model_module.model_hyperparams_dict
 ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
 
 
-# Seed with 5 randomly chosen parameter settings
+# Seed with 15 randomly chosen parameter settings
 for n in range(15):
     # Get random parameter settings
     suggestion = ss.suggest_random()
     
     # Retrieve an objective value for these parameters
-    value = validation_ap_objective(suggestion, model_module)
+    value = validation_ap_objective(suggestion, model_module, model_name, n + 1, None)
     print("Random trial {}: {} -> {}".format(n + 1, suggestion, value))
     
     # Update the optimizer on the result
     ss.update(suggestion, value)
 
-# Run for 40 hyperparameter optimization trials
-for n in range(40):
+with open(save_file,'w') as logging:
     
-    # Get a suggestion from the optimizer
-    suggestion = ss.suggest()
+    print("model, trial, measure, score", file=logging) # header
     
-    # Get an objective value
-    value = validation_ap_objective(suggestion, model_module)
-    print("GP trial {}: {} -> {}".format(n + 1, suggestion, value))
-    
-    # Update the optimizer on the result
-    ss.update(suggestion, value)
-    best_parameters, best_objective = ss.get_best_parameters()
-    print("Best parameters {} for objective {}".format(best_parameters, best_objective))
+    # Run for 40 hyperparameter optimization trials
+    for n in range(40):
+        
+        # Get a suggestion from the optimizer
+        suggestion = ss.suggest()
+        
+        # Get an objective value
+        value = validation_ap_objective(suggestion, model_module, model_name, n + 1, logging)
+        print("GP trial {}: {} -> {}".format(n + 1, suggestion, value))
+        
+        # Update the optimizer on the result
+        ss.update(suggestion, value)
+        best_parameters, best_objective = ss.get_best_parameters()
+        print("Best parameters {} for objective {}".format(best_parameters, best_objective))
 
 
 # Tidy up datasets
