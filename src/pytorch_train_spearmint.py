@@ -198,11 +198,11 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             
     if outfile is not None:
         ap_str = "{0:.4f}".format(max(losses_valid_ap) * 100)
-        print(','.join([model_name, trial_num, 'AP', ap_str]), file=outfile)
+        print(','.join([model_name, str(trial_num), 'AP', ap_str]), file=outfile)
         f1_str = "{0:.4f}".format(max(losses_valid_f1) * 100)
-        print(','.join([model_name, trial_num, 'F1', f1_str]), file=outfile)
+        print(','.join([model_name, str(trial_num), 'F1', f1_str]), file=outfile)
         mcc_str = "{0:.4f}".format(max(losses_valid_mcc) * 100)
-        print(','.join([model_name, trial_num, 'MCC', mcc_str]), file=outfile)
+        print(','.join([model_name, str(trial_num), 'MCC', mcc_str]), file=outfile)
         
         
     return max(losses_valid_ap)     
