@@ -111,7 +111,7 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     if hasattr(model_module, 'num_epochs'):
         num_epochs = model_module.num_epochs
     else:
-        num_epochs = 10
+        num_epochs = 30
        
     print("...Training model for ", num_epochs, " epochs")
     for epoch in range(num_epochs):

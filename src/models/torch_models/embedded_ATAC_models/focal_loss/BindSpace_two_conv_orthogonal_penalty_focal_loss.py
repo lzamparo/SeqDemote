@@ -27,7 +27,7 @@ learning_rate_schedule = {
 
 model_hyperparams_dict={'gamma': {'type': 'float', 'min': 1.0, 'max': 5.0},
                         'alpha': {'type': 'float', 'min': 0.1, 'max': 0.9},
-                        'first_filters': {'type': 'int', 'min': 20, 'max': 200},
+                        'first_filters': {'type': 'int', 'min': 20, 'max': 100},
                         'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
