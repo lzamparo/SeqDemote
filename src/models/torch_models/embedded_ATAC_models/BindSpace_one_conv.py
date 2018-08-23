@@ -13,7 +13,7 @@ data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_T
 save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19  
-batch_size = 32
+batch_size = 128
 momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300

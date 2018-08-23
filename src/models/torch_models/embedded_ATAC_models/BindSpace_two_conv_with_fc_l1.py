@@ -13,13 +13,13 @@ data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_T
 save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19
-batch_size = 32
+batch_size = 128
 momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
 cuda = True
-num_epochs = 10
+num_epochs = 20
 
 learning_rate_schedule = {
 0: 0.005,
