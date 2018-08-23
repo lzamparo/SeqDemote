@@ -13,7 +13,7 @@ data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_T
 save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19  
-batch_size = 32
+batch_size = 128
 momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
@@ -25,7 +25,7 @@ learning_rate_schedule = {
 10: 0.002,
 20: 0.0001}
 
-model_hyperparams_dict={'gamma': {'type': 'float', 'min': 1.0, 'max': 5.0},
+model_hyperparams_dict={'gamma': {'type': 'float', 'min': 0.5, 'max': 3.0},
                         'alpha': {'type': 'float', 'min': 0.1, 'max': 0.9},
                         'first_filters': {'type': 'int', 'min': 20, 'max': 100},
                         'orth_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
