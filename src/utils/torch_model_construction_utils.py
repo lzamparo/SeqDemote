@@ -34,8 +34,6 @@ class FocalLoss(nn.Module):
         Return:
           (tensor) focal loss.
         '''
-        ### Need a better visualization of this; maybe I can dump to a table and calculate 
-        ### the per-element loss, because I'm not sure my formulation is correct.
         weights = self._get_weights(x, t)
         return nn.functional.binary_cross_entropy_with_logits(x, t, weights, size_average=False, reduce=self.reduce)
     

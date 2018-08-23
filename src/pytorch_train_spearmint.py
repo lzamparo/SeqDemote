@@ -25,7 +25,6 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
         model = model_module.reinitialize_model(hyperparams_dict=suggestion)
     except AttributeError:
         model = torch_model_construction_utils.reinitialize_model(model_module.BindSpaceNet)
-    # Bug, bug buggy bug!
     
     print("...number of parameters: ", train_utils.count_params(model.parameters()))
     print("...layer output shapes:")
@@ -140,6 +139,15 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                                                                           total_batches, 
                                                                           loss.item()))
             
+            # check for NaNs
+            if torch.isnan(loss.item()):
+                print('Nan detected in loss for batch', batch_idx)
+                print('Loweing LR, skipping to next batch...')
+                optimizer_kwargs['lr'] = optimizer_kwargs['lr'] * 0.5
+                optim = optimizer(opd_list, **optimizer_kwargs)
+                optim.zero_grad()
+                continue
+            
             optim.zero_grad()
             loss.backward(retain_graph=True)
             
@@ -183,8 +191,8 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                 valid_outputs.append(y_pred_sigmoid.data.numpy())
             
                 
-            avg_precision = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs))
-            print("    validation average precision:\t {0:.4f}.".format(avg_precision * 100))
+            avg_precision_at_recall = train_utils.mt_precision_at_recall(np.vstack(valid_labels), np.vstack(valid_outputs),recall_lvl=0.5)
+            print("    validation average precision at recall {0:.2f}:\t {1:.4f}.".format(0.50, avg_precision_at_recall * 100))
             avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(
                 valid_outputs))
             print("    validation average F1 score:\t {0:.4f}.".format(avg_f1 * 100))            
@@ -192,7 +200,7 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                 valid_outputs))
             print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
             losses_valid_log.append(np.mean(losses))
-            losses_valid_ap.append(avg_precision)
+            losses_valid_ap.append(avg_precision_at_recall)
             losses_valid_f1.append(avg_f1)
             losses_valid_mcc.append(avg_mcc)
             

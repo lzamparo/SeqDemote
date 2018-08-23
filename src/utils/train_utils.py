@@ -1,7 +1,7 @@
 import numpy as np 
 import os
 from collections import OrderedDict
-from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, matthews_corrcoef
+from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, matthews_corrcoef, precision_recall_curve
 
 
 ### Weak AggMo implementation attempt.   
@@ -160,6 +160,26 @@ def mt_avg_precision(y, y_hat, average=True):
         return np.mean(precisions)
     else:
         return precisions
+    
+def mt_precision_at_recall(y, y_hat, average=True, recall_lvl=0.5):
+    """
+    multi-task precision at a given level of recall;
+    y_hat := predicted labels
+    y := actual labels
+    """
+    if not y_hat.shape == y.shape:
+        print("Error in precision: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+        return -1
+    precisions_at_recall = []
+    for targets, preds in zip(y.transpose(), y_hat.transpose()):
+        precision, recall, thresholds = precision_recall_curve(targets, preds)
+        idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
+        precisions.append(precision[idx])
+    
+    if average:
+        return np.mean(precisions_at_recall)
+    else:
+        return precisions_at_recall    
 
 def mt_avg_f1_score(y, y_hat, average=True):
     """
