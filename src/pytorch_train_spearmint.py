@@ -140,9 +140,9 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                                                                           loss.item()))
             
             # check for NaNs
-            if torch.isnan(loss.item()):
+            if any(torch.isnan(loss)):
                 print('Nan detected in loss for batch', batch_idx)
-                print('Loweing LR, skipping to next batch...')
+                print('Lowering LR, skipping to next batch...')
                 optimizer_kwargs['lr'] = optimizer_kwargs['lr'] * 0.5
                 optim = optimizer(opd_list, **optimizer_kwargs)
                 optim.zero_grad()
