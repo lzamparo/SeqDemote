@@ -174,7 +174,7 @@ def mt_precision_at_recall(y, y_hat, average=True, recall_lvl=0.5):
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
         precision, recall, thresholds = precision_recall_curve(targets, preds)
         idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
-        precisions.append(precision[idx])
+        precisions_at_recall.append(precision[idx])
     
     if average:
         return np.mean(precisions_at_recall)
