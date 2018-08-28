@@ -142,11 +142,8 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             # check for NaNs
             if np.isnan(loss.item()):
                 print('Nan detected in loss for batch', batch_idx)
-                print('Lowering LR, skipping to next batch...')
-                optimizer_kwargs['lr'] = optimizer_kwargs['lr'] * 0.5
-                optim = optimizer(opd_list, **optimizer_kwargs)
-                optim.zero_grad()
-                continue
+                print('Aborting this trial...')
+                return 0.0001
             
             optim.zero_grad()
             loss.backward(retain_graph=True)

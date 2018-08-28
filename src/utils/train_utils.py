@@ -37,32 +37,33 @@ def apply_aggregated_threevec_momentum(updates, params=None, velocity_updates=No
     --------
     momentum : Shortcut applying momentum to SGD updates
     """
-    if params is None:
-        params = updates.keys()
-    updates = OrderedDict(updates)
+    #if params is None:
+        #params = updates.keys()
+    #updates = OrderedDict(updates)
     
-    if velocity_updates is None:
-        velocity_updates = OrderedDict()
-        for param in params:
-            value = param.get_value(borrow=True)
-            velocity_updates[param] = [theano.shared(np.zeros(value.shape, dtype=value.dtype),
-                                 broadcastable=param.broadcastable) for i in range(momentums.shape[0])]
+    #if velocity_updates is None:
+        #velocity_updates = OrderedDict()
+        #for param in params:
+            #value = param.get_value(borrow=True)
+            #velocity_updates[param] = [theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                                 #broadcastable=param.broadcastable) for i in range(momentums.shape[0])]
 
-    # calculate update expressions, using velocity_updates to update each velocity vector 
-    # prior to calculating the update for each model parameter
-    for param in params:
+    ## calculate update expressions, using velocity_updates to update each velocity vector 
+    ## prior to calculating the update for each model parameter
+    #for param in params:
         
-        # calculate each velocity update
-        velocity_updates[param] = [momentum * velocity + updates[param] for momentum, velocity in zip(
-            velocity_updates[param], momentums)]
+        ## calculate each velocity update
+        #velocity_updates[param] = [momentum * velocity + updates[param] for momentum, velocity in zip(
+            #velocity_updates[param], momentums)]
         
-        # calculate parameter update
-        #x = m * velocities + updates[param] 
-        K = momentums.shape[0]
-        updates[param] = updates[param] + (1. / K)  * sum(velocity_updates[param])
+        ## calculate parameter update
+        ##x = m * velocities + updates[param] 
+        #K = momentums.shape[0]
+        #updates[param] = updates[param] + (1. / K)  * sum(velocity_updates[param])
 
     
-    return updates, velocity_updates
+    #return updates, velocity_updates
+    pass
 
 
 def per_task_loss(y_hat, y, loss, do_sum=True):
@@ -82,29 +83,6 @@ def one_hot(vec, m=None):
         m = int(np.max(vec)) + 1
 
     return np.eye(m)[vec]
-
-def log_loss_std(y, t, eps=1e-15):
-    """
-    cross entropy loss, summed over classes, mean over batches
-    """
-    losses = log_losses(y, t, eps)
-    return np.std(losses)
-
-
-def log_losses(y, t, eps=1e-15):
-    if t.ndim == 1:
-        t = one_hot(t)
-
-    y = np.clip(y, eps, 1 - eps)
-    losses = 1. * np.sum(t * np.log(y), axis=1)
-    return losses
-
-def log_loss(y, t, eps=1e-15):
-    """
-    cross entropy loss, summed over classes, mean over batches
-    """
-    losses = log_losses(y, t, eps)
-    return np.mean(losses)
 
 
 def thresholded(y_hat, thresh=0.5):
@@ -225,14 +203,6 @@ def log_lr_schedule(num_chunks_train, updates=4, base=0.02):
     changepts[0] = 0
     learning_rates = [base * np.float(np.power(10,-1.0 * i)) for i in range(len(ls))]
 
-    return OrderedDict(zip(changepts,learning_rates))
-
-def lin_lr_schedule(num_chunks_train, base=0.02, cap=0.0002, updates=15):
-    ls = np.linspace(0.0, updates * num_chunks_train, num = updates).astype(int)
-    changepts = ls.astype(int)
-    changepts[0] = 0
-    learning_rates = [np.maximum(base * np.float(np.power(10,-1.0 * i)), cap) for i in range(len(ls))]
-    
     return OrderedDict(zip(changepts,learning_rates))
 
 def current_learning_rate(schedule, idx):
