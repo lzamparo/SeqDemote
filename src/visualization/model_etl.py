@@ -67,7 +67,8 @@ def o_to_df(model_dir, model_regex='spearmint_.+\.o[\d]+', lstrip=None, rstrip=N
     
     
 def parse_spearmint_output(model_file, lstrip=None, rstrip=None):
-    ''' Helper function to parse Spearmint output, '''
+    ''' Helper function to parse Spearmint output.  Return a df
+    with results from each trial '''
     trial_values = []
     with open(model_file, 'r') as f:
         for line in f:
@@ -79,6 +80,32 @@ def parse_spearmint_output(model_file, lstrip=None, rstrip=None):
     df_gp_loss = pd.DataFrame.from_items([('model', [model_name] * num_rows), ('trial', [i for i in range(num_rows)]), ('measure',['AUROC '] * num_rows), ('score', trial_values)])
     return df_gp_loss
 
+def parse_spearmint_params_output(model_file, lstrip=None, rstrip=None):
+    ''' Helper function to parse Spearmint output.  Return a df 
+    with parameter values for the GP tests results '''
+    best_line_parser = re.compile('{(.*)}')
+    kv_parser = re.compile('([\w|_]+)\': ([\d|.|e|-]+)')
+    keys = []
+    values = []
+    scores = []
+    with open(model_file, 'r') as f:
+        for line in f:
+            if line.startswith('GP'):    
+                gp_keys = []
+                gp_values = [] 
+                match = best_line_parser.search(line.strip())
+                objective = line.strip().split()[-1]
+                for kv in match.groups()[0].split(','):
+                    key, value = kv_parser.search(kv).groups()
+                    gp_keys.append(key)
+                    gp_values.append(float(value))
+                gp_scores = [float(objective) for i in range(len(gp_keys))]
+                keys.extend(gp_keys)
+                values.extend(gp_values)
+                scores.extend(gp_scores)
+    if len(keys) > 0:
+        return pd.DataFrame.from_dict({'param': keys, 'value': values, 'objective': scores})       
+    
 
 def extract_model_name(l, lstrip=None, rstrip=None):
     ''' strip model name from a longer line which contains the model name,

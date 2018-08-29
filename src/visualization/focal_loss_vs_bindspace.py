@@ -16,6 +16,10 @@ for model in [f for f in os.listdir(bindspace_root) if f.startswith("BindSpace_t
 bindspace_results = pd.concat(dfs)
 bindspace_results.rename(columns={' trial': 'trial', ' measure': 'measure', ' score': 'score'}, inplace=True)
 
+# Replace any 'AP' meaures with ''
+bindspace_results.loc[bindspace_results['measure'] == 'AP', 'measure'] = "PR50"
+
+
 # code the focal loss model and corresponding BindSpace model together
 bindspace_results['code'] = 'blerg'
 model_files = [f for f in os.listdir(bindspace_root) if f.startswith("BindSpace_two")]

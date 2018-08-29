@@ -2,7 +2,9 @@ import os
 import plotnine as gg
 import numpy as np
 import pandas as pd
-from sklearn.metrics import average_precision_score, f1_score, matthews_corrcoef
+
+from sklearn.metrics import precision_recall_curve, f1_score, matthews_corrcoef
+from utils import train_utils
 
 factors = ["CEBPB","CEBPG", "CREB3L1", "CTCF","CUX1","ELK1","ETV1",
            "FOXJ2","KLF13","KLF16","MAFK","MAX","MGA","NR2C2",
@@ -24,6 +26,7 @@ def gather_gkm_predictions(output_file):
     return y_hat
 
 # read ls-gkmsvm results, read results into tidy df, calc AP, F1, MCC
+recall_lvl = 0.5
 gkmsvm_dfs = []
 exp_root = os.path.expanduser(gkmsvm_results_dir)
 for model in os.listdir(exp_root):
@@ -40,25 +43,26 @@ for model in os.listdir(exp_root):
         peaks_labels = np.ones_like(peaks_predictions)
         flanks_labels = np.zeros_like(flanks_predictions)
         y = np.hstack((peaks_labels, flanks_labels))
-        ap = average_precision_score(y, y_hat)
+        precision, recall, thresholds = precision_recall_curve(y, y_hat)
+        idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
         eff_one = f1_score(y, scores_to_predictions(y_hat))
         mcc = matthews_corrcoef(y, scores_to_predictions(y_hat))
-        ap_list.append(ap)
+        ap_list.append(precision[idx])
         f1_list.append(eff_one)
         mcc_list.append(mcc)
 
     gkm_model_name_list = [model for l in range(len(factors))]
-    gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'AP': ap_list, 'F1': f1_list, 'MCC': mcc_list})
+    gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'PR50': ap_list, 'F1': f1_list, 'MCC': mcc_list})
     gkmsvm_dfs.append(gkmsvm_df)
 
 # turn into averaged tidy df
 gkmsvm_results = pd.concat(gkmsvm_dfs)
-gkmsvm_results_no_factors = gkmsvm_results[['model', 'AP', 'F1', 'MCC']]
+gkmsvm_results_no_factors = gkmsvm_results[['model', 'PR50', 'F1', 'MCC']]
 groups = gkmsvm_results_no_factors.groupby('model')
 gkmsvm_averaged_results = groups.aggregate(np.mean)
 gkmsvm_averaged_results = gkmsvm_averaged_results.reset_index()
 
-gkmsvm_tidy_df = gkmsvm_averaged_results.melt(value_vars=['AP','F1','MCC'], id_vars='model', var_name='measure', value_name='score')
+gkmsvm_tidy_df = gkmsvm_averaged_results.melt(value_vars=['PR50','F1','MCC'], id_vars='model', var_name='measure', value_name='score')
 gkmsvm_tidy_df['trial'] = 40
 gkmsvm_tidy_df['score'] = gkmsvm_tidy_df['score'] * 100
 
@@ -67,11 +71,18 @@ bindspace_root = os.path.expanduser(results_dir)
 dfs = []
 
 for model in os.listdir(bindspace_root):
-    dfs.append(pd.read_csv(os.path.join(bindspace_root,model))) 
+    try:
+        df = pd.read_csv(os.path.join(bindspace_root,model)) 
+    except pd.errors.EmptyDataError:
+        continue
+    dfs.append(df)
     
 # read matching bindspace models into tidy df
 bindspace_results = pd.concat(dfs)
 bindspace_results.rename(columns={' trial': 'trial', ' measure': 'measure', ' score': 'score'}, inplace=True)
+
+# Replace any 'AP' meaures with ''
+bindspace_results.loc[bindspace_results['measure'] == 'AP', 'measure'] = "PR50"
 
 # save path
 save_path = "/Users/zamparol/projects/SeqDemote/results/BindSpace_embedding_extension/plots"
