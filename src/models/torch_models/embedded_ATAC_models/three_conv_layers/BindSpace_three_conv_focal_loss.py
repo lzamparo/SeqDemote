@@ -19,7 +19,6 @@ embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
 cuda = True
-
 initial_lr = 0.005
 
 model_hyperparams_dict={'gamma': {'type': 'float', 'min': 0.5, 'max': 3.0},

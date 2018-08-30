@@ -61,11 +61,10 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     
     print("...setting the learning rate scheduler ", flush=True)
     try:
-        lr_scheduler = model_module.learning_rate_schedule
+        lr_scheduler = model_module.learning_rate_scheduler
         lrs_kwargs = model_module.lrs_kwargs
         scheduler = lr_scheduler(optim, **lrs_kwargs)
     except AttributeError:
-        learning_rate_schedule = { 0: model_module.learning_rate } 
         scheduler = None
     
     additional_losses = model_module.get_additional_losses(model, suggestion)

@@ -19,11 +19,7 @@ embedded_seq_len = 84300
 embedding_dim_len = 300
 transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
 cuda = True
-
-learning_rate_schedule = {
-0: 0.005,
-10: 0.002,
-20: 0.0001}
+initial_lr = 0.005
 
 model_hyperparams_dict={'first_filters': {'type': 'int', 'min': 20, 'max': 200},
                         'dropout': {'type': 'float', 'min': 0.05, 'max': 0.9},
@@ -113,15 +109,16 @@ def get_additional_losses(net, hyperparams_dict):
     return []
     
 net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=default_hyperparams)
+# Initialize the model params
 net.apply(tmu.init_weights)
 
 # Collect weight, bias parameters for regularization
 weights, biases, sparse_weights = tmu.get_model_param_lists(net)
 
-# Initialize the params, put together the arguments for the optimizer
+# Initialize the optimizer params, put together the arguments for the optimizer
 additional_losses = get_additional_losses(net, default_hyperparams)
 optimizer, optimizer_param_dicts = tmu.initialize_optimizer(weights, biases, 
     sparse_weights, 
     default_hyperparams)
 
-optimizer_kwargs = {'lr': learning_rate_schedule[0]}
+optimizer_kwargs = {'lr': initial_lr}
