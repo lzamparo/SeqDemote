@@ -38,12 +38,6 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
         
     valid_loss = model_module.valid_loss
         
-    print("...setting the learning rate schedule ", flush=True)
-    if hasattr(model_module, 'learning_rate_schedule'):
-        learning_rate_schedule = model_module.learning_rate_schedule
-    else:
-        learning_rate_schedule = { 0: model_module.learning_rate }
-        
     print("...Checking to see if CUDA  is required", flush=True)
     if hasattr(model_module, 'cuda'):
         import torch
@@ -63,7 +57,16 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                                                             sparse_weights,
                                                             suggestion)
     optimizer_kwargs = model_module.optimizer_kwargs
-    optim = optimizer(opd_list, **optimizer_kwargs)     
+    optim = optimizer(opd_list, **optimizer_kwargs)  
+    
+    print("...setting the learning rate scheduler ", flush=True)
+    if hasattr(model_module, 'learning_rate_schedule'):
+        lr_scheduler = model_module.learning_rate_schedule
+        lrs_kwargs = model_module.lrs_kwargs
+        scheduler = lr_scheduler(optim, **lrs_kwargs)
+    else:
+        learning_rate_schedule = { 0: model_module.learning_rate } 
+        scheduler = None
     
     additional_losses = model_module.get_additional_losses(model, suggestion)
     optim.zero_grad()
@@ -116,6 +119,9 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     for epoch in range(num_epochs):
         
         print("Starting training for epoch ", epoch)
+        if scheduler:
+            scheduler.step()
+        
         model.train()  # set model to training, if not already.
         epoch_losses = []
         epoch_start_time = time.time()
