@@ -60,11 +60,11 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     optim = optimizer(opd_list, **optimizer_kwargs)  
     
     print("...setting the learning rate scheduler ", flush=True)
-    if hasattr(model_module, 'learning_rate_schedule'):
+    try:
         lr_scheduler = model_module.learning_rate_schedule
         lrs_kwargs = model_module.lrs_kwargs
         scheduler = lr_scheduler(optim, **lrs_kwargs)
-    else:
+    except AttributeError:
         learning_rate_schedule = { 0: model_module.learning_rate } 
         scheduler = None
     

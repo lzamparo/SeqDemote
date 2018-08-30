@@ -109,21 +109,33 @@ def orthogonal_filter_penalty(net, orth_lambda=1e-6, cuda=True):
             orth_loss = orth_lambda * WWt.sum()
     return [orth_loss]
 
-def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict):
-    ''' Initialize the params, put together the arguments for the optimizer '''
-
-    weight_lambda = hyperparams_dict['weight_lambda']
-    bias_lambda = hyperparams_dict['bias_lambda']
-    if sparse_weights:
-        sparse_lambda = hyperparams_dict['sparse_lambda']
+def initialize_optimizer(weights, biases, sparse_weights, hyperparams_dict, optimizer=torch.optim.Adam):
+    ''' A standard model to initialize the list of dictionaries for
+    paramterizing an optimizer '''
     
-    optimizer = torch.optim.Adam
-    optimizer_param_dicts = [
-        {'params': weights, 'weight_decay': weight_lambda},
-            {'params': biases, 'weight_decay': bias_lambda}
-                        ]
-    if sparse_weights:
-        optimizer_param_dicts.append({'params': sparse_weights, 'weight_decay': sparse_lambda})
+    weights_dict = {'params': weights}
+    biases_dict = {'params': biases}
+    sparse_dict = {'params': sparse_weights}
+    
+    try:
+        weight_lambda = hyperparams_dict['weight_lambda']
+        weights_dict['weight_decay'] = weight_lambda
+    except KeyError:
+        pass # no additional WD for weights
+        
+    try:
+        bias_lambda = hyperparams_dict['bias_lambda']
+        biases_dict['weight_decay'] = bias_lambda
+    except KeyError:
+        pass # no additional WD for biases
+
+    try:
+        sparse_lambda = hyperparams_dict['sparse_lambda']
+        sparse_dict['weight_decay'] = sparse_lambda
+    except KeyError:
+        pass # no additional sparsity
+    
+    optimizer_param_dicts = [weights_dict, biases_dict, sparse_dict]
     return optimizer, optimizer_param_dicts
 
 
