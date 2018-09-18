@@ -7,6 +7,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 from utils import train_utils
 
+from tensorboardX import SummaryWriter
+
 ### Load up and step through validating data
 if len(sys.argv) < 2:
     sys.exit("Usage: pytorch_validate.py <configuration_name> <save_state_file>")
@@ -54,10 +56,20 @@ valid_labels = []
 
 losses = []
 
+# for Tensorbard logging
+write_graph = True # flag flipped once first batch processed
+writer = SummaryWriter('./logs')
+writer.add_scalar('valid loss', val_loss)
+
 model.eval()
 for batch_idx, (x, y) in enumerate(valid_loader):
     valid_labels.append(y.numpy())
     x, y = data_cast(x), data_cast(y)         
+    
+    if write_graph:
+        writer.add_graph(model, x)
+        write_graph = False
+        
     y_pred = model(x)
     
     loss = valid_loss(y_pred, y)
