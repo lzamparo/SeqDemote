@@ -14,6 +14,7 @@ from load_pytorch import DNase_Valid_Dataset
 
 path = os.path.join(find_project_root(), "data", "DNase", "encode_roadmap.h5")
 model_config = os.path.join("torch_models","torch_basset_repro.py")
+conv_palm_config = os.path.join("torch_models","embedded_ATAC_models","palm_and_finger","conv_palm.py")
 
 test_model_pickle_path = os.path.join(find_project_root(),"tests","test_data","pytorch_basset.mdl")
 test_losses_pickle_path = os.path.join(find_project_root(),"tests","test_data","pytorch_params.pkl")
@@ -23,18 +24,44 @@ batch_size = 128
 subsequence_size = 600
 num_batches = valid_examples // batch_size
 
-def reconstitute_model():
+k562_atac_factors = 19
+
+def reconstitute_model(model_file=model_config):
     
-    model_path_name = os.path.join(find_project_root(), 'src', 'models', model_config)
+    model_path_name = os.path.join(find_project_root(), 'src', 'models', model_file)
     spec = importlib.util.spec_from_file_location(model_config, model_path_name)
     model_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_module)
     model = model_module.net    
     return model, model_module
 
-def setup_dataset_and_loader(transform=False, workers=1):
+def specific_setup_dataset_and_loader(model_file=model_config,workers=1):
     
-    model, model_module = reconstitute_model()
+    model, model_module = reconstitute_model(model_file)
+    try:
+        data_cast = model_module.data_cast
+        label_cast = model_module.label_cast
+    except AttributeError:
+        data_cast = lambda x: torch.autograd.Variable(x).float()
+        label_cast = lambda y: torch.autograd.Variable(y).float()
+
+    valid_loss = model_module.valid_loss
+    try:
+        transformer = model_module.transformer
+        valid_dataset = model_module.valid_dataset
+    except AttributeError:
+        print("Fail, fail fail: no transformer or no validation dataset.")
+    
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              num_workers=workers)
+    return valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast
+    
+
+def default_setup_dataset_and_loader(transform=False, workers=1, model_file=model_config):
+    
+    model, model_module = reconstitute_model(model_file)
     
     if hasattr(model_module,'data_cast') and hasattr(model_module, 'label_cast'):
         data_cast = model_module.data_cast
@@ -59,17 +86,35 @@ def test_build_data_loader():
     """ Can I build a dataset the ATAC data with 
     the correct length """
     
-    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = setup_dataset_and_loader()
+    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = default_setup_dataset_and_loader()
     valid_len = len(valid_dataset)
     valid_dataset.close()
     eq_(valid_len, valid_examples)
 
 
+def test_build_palm_finger_model():
+    """
+    Can I build the conv_palm model?
+    """
+    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = specific_setup_dataset_and_loader(
+        model_file=conv_palm_config)
+    
+    for batch_idx, (x,y) in enumerate(valid_loader):
+        if batch_idx > 1: 
+            break
+        x, y = data_cast(x), data_cast(y)
+        y_pred = model(x)
+        
+    ok_(len(y_pred) == k562_atac_factors)
+        
+    valid_dataset.close()
+    
+    
 def test_validation_loop_shapes_and_types():
     """ Ensure predicted tensors are of the correct type,
     and that the predictions are the same shape """
     
-    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = setup_dataset_and_loader()
+    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = default_setup_dataset_and_loader()
     
     torch.manual_seed(0)
     data_seen = 0
@@ -99,7 +144,7 @@ def test_pickle_model():
     ''' running into a load of errors just getting a model to go through the
     step of '''
     
-    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = setup_dataset_and_loader()
+    valid_dataset, valid_loader, model, valid_loss, data_cast, label_cast = default_setup_dataset_and_loader()
     model_config = "pytorch_models/torch_basset_repro.py"
     expid = "001_test.txt"
     
