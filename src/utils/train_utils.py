@@ -67,10 +67,15 @@ def apply_aggregated_threevec_momentum(updates, params=None, velocity_updates=No
 
 
 def per_task_loss(y_hat, y, loss, do_sum=True):
-    ''' Calculate the per-task loss.  Shape of y, y_hat assumed 
-    to be like (samples, tasks) '''
+    ''' Calculate the per-task loss.  The shape of y, y_hat 
+    might be the same (tasks are all encoded in an NP array) or 
+    y_hat will be a list of tasks, with length equal to y.shape[1]
+    '''
     
-    all_task_losses = [loss(y_hat[:,c], y[:,c]) for c in range(y_hat.shape[1])]
+    try:
+        all_task_losses = [loss(y_hat[:,c], y[:,c]) for c in range(y_hat.shape[1])]
+    except (AttributeError, AssertionError) as e:
+        all_task_losses = [loss(y_hat[c], y[:,c]) for c in range(y.shape[1]))]
     if do_sum:
         return sum(all_task_losses)
     else:
@@ -144,15 +149,22 @@ def mt_precision_at_recall(y, y_hat, average=True, recall_lvl=0.5):
     multi-task precision at a given level of recall;
     y_hat := predicted labels
     y := actual labels
+    
+    Assume y_hat is same shape as y, otherwise it is a list.
     """
-    if not y_hat.shape == y.shape:
-        print("Error in precision: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
-        return -1
+    
     precisions_at_recall = []
-    for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        precision, recall, thresholds = precision_recall_curve(targets, preds)
-        idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
-        precisions_at_recall.append(precision[idx])
+    try:
+        for targets, preds in zip(y.transpose(), y_hat.transpose()):
+            precision, recall, thresholds = precision_recall_curve(targets, preds)
+            idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
+            precisions_at_recall.append(precision[idx])
+    
+    except AttributeError:
+        for targets, preds in zip(y.transpose(), y_hat):
+            precision, recall, thresholds = precision_recall_curve(targets, preds)
+            idx = (np.abs(recall - recall_lvl)).argmin()  # index of element in recall array closest to recall_lvl
+            precisions_at_recall.append(precision[idx])            
     
     if average:
         return np.mean(precisions_at_recall)
@@ -164,13 +176,18 @@ def mt_avg_f1_score(y, y_hat, average=True):
     multi-task f1 score: un-weighted f1 scores;
     y_hat := predicted labels
     y := actual labels from data
+    
+    Assume y_hat is same shape as y, otherwise it is a list.
     """
-    if not y_hat.shape == y.shape:
-        print("Error in f1 score: shame mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
-        return -1
+    
     f1_scores = []
-    for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        f1_scores.append(f1_score(targets, thresholded(preds)))
+    try:
+        for targets, preds in zip(y.transpose(), y_hat.transpose()):
+            f1_scores.append(f1_score(targets, thresholded(preds)))
+    
+    except AttributeError:
+        for targets, preds in zip(y.transpose(), y_hat):
+            f1_scores.append(f1_score(targets, thresholded(preds)))        
     
     if average:
         return np.mean(f1_scores)
@@ -182,14 +199,18 @@ def mt_avg_mcc(y, y_hat, average=True):
     multi-task MCC score: unweighted MCC scores
     y_hat := predicted labels
     y := actual labels
+    
+    Assume y_hat is same shape as y, otherwise it is a list.
     '''
-    if not y_hat.shape == y.shape:
-        print("Error in MCC score: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
-        return -1
+    
     mcc_scores = []
-    for targets, preds in zip(y.transpose(), y_hat.transpose()):
-        mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
-        
+    try:
+        for targets, preds in zip(y.transpose(), y_hat.transpose()):
+            mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
+    except AttributeError:
+        for targets, preds in zip(y.transpose(), y_hat):
+            mcc_scores.append(matthews_corrcoef(targets, thresholded(preds)))
+            
     if average:
         return np.mean(mcc_scores)
     else:
