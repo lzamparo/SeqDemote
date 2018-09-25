@@ -75,11 +75,12 @@ def per_task_loss(y_hat, y, loss, do_sum=True):
     try:
         all_task_losses = [loss(y_hat[:,c], y[:,c]) for c in range(y_hat.shape[1])]
     except (AttributeError, AssertionError) as e:
-        all_task_losses = [loss(y_hat[c], y[:,c]) for c in range(y.shape[1]))]
+        all_task_losses = [loss(y_hat[c], y[:,c]) for c in range(y.shape[1])]
     if do_sum:
         return sum(all_task_losses)
     else:
         return all_task_losses
+    
 
 ### Log-loss calculating utils
 

@@ -3,6 +3,7 @@ import os
 import time
 
 import numpy as np
+import torch
 import torch.nn as nn
 
 from torch.utils.data import DataLoader
@@ -12,6 +13,28 @@ import importlib.util
 import simple_spearmint
 
 from utils import torch_model_construction_utils
+
+
+def repackage_to_cpu(y_pred):
+    ''' Repackage the predictions in y_pred 
+    to the CPU.  If it is a tensor, call `.cpu()`. 
+    If it is a list, call `.cpu()` on each element
+    
+    Need to deal with the case that y_pred is a list of
+    tensors in the case where the palm and finger model 
+    produce the following:
+
+    '''
+    
+    try:
+        # call .cpu on y_pred
+        repacked = y_pred.cpu()
+    except AttributeError:
+        # it's a list.  Repackage into a tensor, call .cpu on the whole thing
+        repacked = torch.cat(y_pred, dim=1)
+        repacked = repacked.cpu()
+        
+    return repacked
 
 
 def validation_ap_objective(suggestion, model_module, model_name, trial_num, outfile=None):
@@ -132,7 +155,7 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                 x, y = x.cuda(async=True), y.cuda(async=True)
             y_pred = model(x)
             
-            losses = train_utils.per_task_loss(y_pred, y, training_loss,do_sum=False)
+            losses = train_utils.per_task_loss(y_pred, y, training_loss, do_sum=False)
             for reg in additional_losses:
                 losses.append(reg)
             
@@ -171,7 +194,6 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             print("Validating...")
             valid_outputs = []
             valid_labels = []
-            losses = []
             
             model.eval()  # set model to evaluation mode
             
@@ -182,13 +204,10 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                     x, y = x.cuda(async=True), y.cuda(async=True)            
                 y_pred = model(x)
                 
-                loss = valid_loss(y_pred, y)
                 if (batch_idx + 1) % 10 == 0:
-                    print("validation batch ", batch_idx, " : ", loss.data)
-                losses.append(loss.data)
+                    print("validation batch ", batch_idx)
                 
-                if cuda:
-                    y_pred = y_pred.cpu()
+                y_pred = repackage_to_cpu(y_pred)
                 y_pred_sigmoid = nn.functional.sigmoid(y_pred)    
                 valid_outputs.append(y_pred_sigmoid.data.numpy())
             
@@ -201,7 +220,6 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(
                 valid_outputs))
             print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
-            losses_valid_log.append(np.mean(losses))
             losses_valid_ap.append(avg_precision_at_recall)
             losses_valid_f1.append(avg_f1)
             losses_valid_mcc.append(avg_mcc)
