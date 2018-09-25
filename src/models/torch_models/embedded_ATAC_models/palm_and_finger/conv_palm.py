@@ -60,14 +60,10 @@ class BindSpaceNet(nn.Module):
         conv_size = self._get_conv_output(input_size)  
 
         # factor specific 'finger' parameters
-        self.fingers = []
-        self.tips = []
-        for f in range(num_factors):
-            self.fingers.append(nn.Sequential(nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1))),
+        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1))),
                                             nn.MaxPool2d((4,1)),
-                                            nn.Dropout(p=0.5)))
-            self.tips.append(nn.utils.weight_norm(nn.Linear(conv_size, 1)))
-        
+                                            nn.Dropout(p=0.5)) for f in range(num_factors)])
+        self.tips = nn.ModuleList([nn.utils.weight_norm(nn.Linear(conv_size, 1)) for f in range(num_factors)])
         
 
     def forward(self, input):
