@@ -254,8 +254,8 @@ model_hyperparams_dict = model_module.model_hyperparams_dict
 ss = simple_spearmint.SimpleSpearmint(model_hyperparams_dict, minimize=False)
 
 
-# Seed with 15 randomly chosen parameter settings
-for n in range(15):
+# Seed with 10 randomly chosen parameter settings
+for n in range(10):
     # Get random parameter settings
     suggestion = ss.suggest_random()
     
@@ -270,8 +270,8 @@ with open(save_file,'w') as logging:
     
     print("model, trial, measure, score", file=logging) # header
     
-    # Run for 40 hyperparameter optimization trials
-    for n in range(40):
+    # Run for 30 hyperparameter optimization trials
+    for n in range(30):
         
         # Get a suggestion from the optimizer
         suggestion = ss.suggest()
