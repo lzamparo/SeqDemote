@@ -451,7 +451,11 @@ def pad_sequences(encoded_sequence, size=2000):
    
 def resize_sequences(coords, sequence, fasta, size=2000):
     ''' Resize the sequence at coords, truncating or expanding (from fasta)
-    file as required '''
+    file as required 
+    
+    TODO: better would be to know where the alterations occur within each
+    peak, so we can be sure that the resized peak are included.
+    '''
     
     if len(sequence) < size:
         
