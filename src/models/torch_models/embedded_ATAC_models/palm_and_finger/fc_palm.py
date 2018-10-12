@@ -5,103 +5,73 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from load_pytorch import Embedded_k562_ATAC_train_dataset, Embedded_k562_ATAC_validation_dataset
-from load_pytorch import EmbeddingReshapeTransformer
+from load_pytorch import BindspaceProbeDataset
+from load_pytorch import ProbeReshapeTransformer
 from utils import torch_model_construction_utils as tmu
 
 data_path = os.path.expanduser("~/projects/SeqDemote/data/ATAC/K562/K562_embed_TV_annotated_split.h5")
 save_dir = "BindSpace_embedding_extension"
 
 num_factors = 19  
-batch_size = 128
+batch_size = 64
 momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
-transformer = EmbeddingReshapeTransformer(embedding_dim_len, embedded_seq_len)
 cuda = True
-initial_lr = 0.005
+initial_lr = 0.01
 
-model_hyperparams_dict={'first_layer': {'type': 'int', 'min': 20, 'max': 200},
+model_hyperparams_dict={'first_layer': {'type': 'int', 'min': 20, 'max': 100},
+                        'second_layer': {'type': 'int', 'min': 20, 'max': 50},
+                        'dropout': {'type': 'float', 'min': 0.05, 'max': 0.4},
                         'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
                         'sparse_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
 
-default_hyperparams={'first_filters': 30,
-                     'weight_lambda': 5e-3,
-                     'bias_lambda': 5e-3,
-                     'sparse_lambda': 10e-3}
+
+default_hyperparams={'first_layer': 100,
+                     'second_layer': 20,
+                     'dropout': 0.2,
+                     'weight_lambda': 5e-2,
+                     'bias_lambda': 5e-2,
+                     'sparse_lambda': 10e-2}
 
 validate_every = 1
 save_every = 1
 
 train_loss = nn.BCEWithLogitsLoss(size_average=False)
 valid_loss = nn.BCEWithLogitsLoss(size_average=False)
-train_dataset = Embedded_k562_ATAC_train_dataset(data_path, transform=transformer)
-valid_dataset = Embedded_k562_ATAC_validation_dataset(data_path, transform=transformer)
+train_dataset = BindspaceProbeDataset(data_path, dataset='training', transform=None)
+valid_dataset = BindspaceProbeDataset(data_path, dataset='validation', transform=None)
 data_cast = lambda x: torch.autograd.Variable(x).float()
 label_cast = lambda y: torch.autograd.Variable(y).float()
 
 
 class BindSpaceNet(nn.Module):
 
-    def __init__(self, input_size=(1, 281, 300), num_factors=24, hyperparams_dict=default_hyperparams):
+    def __init__(self, input_size=300, num_factors=19, hyperparams_dict=default_hyperparams):
 
         super(BindSpaceNet, self).__init__()
         self.relu = nn.SELU()
-        num_filters = hyperparams_dict['first_filters']
+        fc1_out_features = hyperparams_dict['first_layer']
+        fc2_out_features = hyperparams_dict['second_layer']
+        self.dropout = nn.Dropout(p=hyperparams_dict['dropout'])
         
         # shared parameters
-        self.conv1 = nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300)))
-        self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
+        self.fc1 = nn.utils.weight_norm(nn.Linear(input_size, fc1_out_features))
         
-        # output of shared params should be (num_filters * 93)
-
-        # fixture parameters to calculate flattened represenation 
-        self.conv2 = nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1)))
-        self.pool2 = nn.MaxPool2d((4,1))
-        conv_size = self._get_conv_output(input_size)  
-
         # factor specific 'finger' parameters
         self.fingers = []
-        self.tip = []
         for f in range(num_factors):
-            self.finger[f] = nn.Sequential([nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1))),
-                                            nn.MaxPool2d((4,1)),
-                                            nn.Dropout(p=0.5)])
-            self.tip[f] = nn.utils.weight_norm(nn.Linear(conv_size, 1))
-
+            self.finger[f] = nn.Sequential([nn.utils.weight_norm(nn.Linear(fc1_out_features,fc2_out_features)),
+                                            self.dropout, nn.utils.weight_norm(nn.Linear(conv_size, 1))])
 
     def forward(self, input):
 
         # shared forward computation
-        x = self.pool1(self.relu(self.conv1(input)))
+        x = self.relu(self.fc1(input))
             
         # factor-specific forward computations
-        fingers = [finger(x) for finger in self.fingers]
-    
-        # flatten the output of each factor specific computations        
-        flattened_fingers = [f.view(f.size(0), -1) for f in fingers]
-    
-        # calculate the output of each factor specific layer
-        factor_outputs = [tip(f) for tip, f in zip(self.tip, flattened_fingers)]
-    
-        return factor_outputs
-
-    # helper function to calculate number of units to expect for 
-    # FC layers
-    def _get_conv_output(self, shape):
-        bs = 1
-        fixture_input = torch.autograd.Variable(torch.rand(bs, *shape))
-        output_feat = self._forward_features(fixture_input)
-        n_size = output_feat.data.view(bs, -1).size(1)
-        return n_size
-
-    def _forward_features(self, x):
-        x_c1 = self.conv1(x)
-        x_p1 = self.pool1(x_c1)
-        x_c2 = self.conv2(x_p1)
-        x_p2 = self.pool2(x_c2)
-        return x_p2
+        return [finger(x) for finger in self.fingers]
 
 def reinitialize_model(num_factors=19, hyperparams_dict=default_hyperparams):
     net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=hyperparams_dict)
