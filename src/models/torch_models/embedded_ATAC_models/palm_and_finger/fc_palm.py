@@ -60,10 +60,8 @@ class BindSpaceNet(nn.Module):
         self.fc1 = nn.utils.weight_norm(nn.Linear(input_size, fc1_out_features))
         
         # factor specific 'finger' parameters
-        self.fingers = []
-        for f in range(num_factors):
-            self.finger[f] = nn.Sequential([nn.utils.weight_norm(nn.Linear(fc1_out_features,fc2_out_features)),
-                                            self.dropout, nn.utils.weight_norm(nn.Linear(conv_size, 1))])
+        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Linear(fc1_out_features,fc2_out_features)),
+                                            self.dropout, nn.utils.weight_norm(nn.Linear(fc2_out_features, 1))) for f in range(num_factors)])
 
     def forward(self, input):
 
