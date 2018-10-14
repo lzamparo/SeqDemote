@@ -55,21 +55,18 @@ class BindSpaceNet(nn.Module):
         fc1_out_features = hyperparams_dict['first_layer']
         fc2_out_features = hyperparams_dict['second_layer']
         self.dropout = nn.Dropout(p=hyperparams_dict['dropout'])
-        
-        # shared parameters
-        self.fc1 = nn.utils.weight_norm(nn.Linear(input_size, fc1_out_features))
-        
+                
         # factor specific 'finger' parameters
-        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Linear(fc1_out_features,fc2_out_features)),
-                                            self.dropout, nn.utils.weight_norm(nn.Linear(fc2_out_features, 1))) for f in range(num_factors)])
+        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Linear(input_size, fc1_out_features)),
+                                                    self.relu, self.dropout,
+                                                    nn.utils.weight_norm(nn.Linear(fc1_out_features,fc2_out_features)),
+                                                    self.relu, self.dropout,
+                                                    nn.utils.weight_norm(nn.Linear(fc2_out_features, 1))) for f in range(num_factors)])
 
     def forward(self, input):
-
-        # shared forward computation
-        x = self.relu(self.fc1(input))
             
         # factor-specific forward computations
-        return [finger(x) for finger in self.fingers]
+        return [finger(input) for finger in self.fingers]
 
 def reinitialize_model(num_factors=19, hyperparams_dict=default_hyperparams):
     net = BindSpaceNet(num_factors=num_factors, hyperparams_dict=hyperparams_dict)
