@@ -3,6 +3,7 @@ import argparse
 import fnmatch
 import pickle
 import h5py
+import time
 import numpy as np
 
 from collections import OrderedDict
@@ -44,7 +45,7 @@ def probe_to_kmers(probe, kmer_len=8):
         for element in kmer_to_id.keys():
             if fnmatch.fnmatch(kmer, element):
                 matching_bindspace_elements.append(element)
-    return [kmer_to_id[element] for element in matching_bindspace_elements] 
+    return np.array([kmer_to_id[element] for element in matching_bindspace_elements]) 
     
     
 # treat this number of consecutive bases of ATAC-seq peak as a probe to be embedded
@@ -75,9 +76,12 @@ with open(os.path.expanduser(os.path.join(args.prefix, args.bindspace)),'r') as 
         
 # generate hdf5 file with training, validation, test split peaks
 encoded_data = h5py.File(os.path.join(args.prefix, args.h5), 'w',swmr=True)
-train_group = encoded_data.create_group("/train")
-valid_group = encoded_data.create_group("/valid")
-test_group = encoded_data.create_group("/test")
+train_data_group = encoded_data.create_group("/train/data")
+valid_data_group = encoded_data.create_group("/valid/data")
+test_data_group = encoded_data.create_group("/test/data")
+train_label_group = encoded_data.create_group("/train/label")
+valid_label_group = encoded_data.create_group("/valid/label")
+test_label_group = encoded_data.create_group("/test/label")
 
 
 # get fasta records, labels
@@ -90,7 +94,7 @@ labels = []
 with open(os.path.expanduser(os.path.join(args.prefix, args.labels)), 'r') as f:
     header = f.readline()
     for line in f:
-        labels.append(parse_line(line))
+        labels.append(parse_label_line(line))
 
 assert(len(records) == len(labels))
 num_peaks = len(records)
@@ -98,8 +102,8 @@ num_peaks = len(records)
 # calculate training / test / validation split
 # 0: train, 1: validation, 2: test
 train_valid_test_split = np.random.choice([0,1,2], num_peaks, p=[0.8,0.1,0.1]) 
-tvs_split_dict = {0: train_group, 1: valid_group, 2: test_group}
-
+tvs_data_dict = {0: train_data_group, 1: valid_data_group, 2: test_data_group}
+tvs_label_dict = {0: train_label_group, 1: valid_label_group, 2: test_label_group}
 # for each peak, choose a split, partition into probes, 
 # determine the kmer spectrum of the probes, write 
 # their ID as an array.
@@ -107,15 +111,26 @@ tvs_split_dict = {0: train_group, 1: valid_group, 2: test_group}
 # - each peak is its own group within the train/test/valid groups
 # this resolves the problem of different lengths of sequence
 
-for record, labels, split in zip(records, labels, train_valid_test_split):
+processed = 0
+for record, label, split in zip(records, labels, train_valid_test_split):
+    t0 = time.time()
     # make the sub-group within the appropriate split
     peak_id, sequence = record
-    peak_group = tvs_split_dict[split]
-    peak_group.create_group(peak_id)
+    dataset_group = tvs_data_dict[split]
+    label_group = tvs_label_dict[split]
+    peak_data_group = dataset_group.create_group(peak_id)
+    label_group.create_dataset(peak_id, data=label)
     
     # process each probe in the peak
+    for i, probe in enumerate(peak_to_probes(sequence, args.stride)):
+        probe_name = peak_id + "_" + str(i)
+        peak_data_group.create_dataset(probe_name, data=probe_to_kmers(probe))
+     
+    processed += 1
+    if processed % 10 == 0:
+        t1 = time.time()
+        print("finished peak ", processed, " processed in ", (t1 - t0), "seconds")
+   
     
-    # 
-    
-
+encoded_data.close()
 

@@ -7,9 +7,10 @@ import numpy as np
 import importlib.util
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
 
+from torch.utils.data import DataLoader
 from utils import accounting, train_utils
+from utils import torch_model_construction_utils
 
 
 if len(sys.argv) < 2:

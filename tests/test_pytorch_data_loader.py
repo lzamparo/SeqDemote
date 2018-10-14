@@ -87,7 +87,7 @@ def setup_k562_dataset_and_loader(transform=False, workers=1):
                               num_workers=workers)
     return valid_dataset, valid_loader
 
-def setup_k562_bindspace_probe_dataset_and_loader(transform=False, workers=2):
+def setup_k562_bindspace_probe_dataset_and_loader(transform=False, workers=1):
     if transform:
         transformer = ProbeReshapeTransformer()
         valid_dataset = BindspaceProbeDataset(k562_path,dataset='validation',transform=transformer)
