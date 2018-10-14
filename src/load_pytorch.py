@@ -31,7 +31,6 @@ class BindspaceProbeDataset(Dataset):
         start = probe * self.embedding_dims
         stop = (probe + 1) * self.embedding_dims
         
-        print("DEBUG: from index ", index, " getting from peak ", peak, " : ", start, " -> ", stop)
         features = self.h5f[self.data_path][peak][start:stop]
         labels = self.h5f[self.label_path][peak]
         if self.transform is not None:
