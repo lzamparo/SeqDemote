@@ -50,29 +50,26 @@ class BindSpaceNet(nn.Module):
         self.relu = nn.SELU()
         num_filters = hyperparams_dict['first_filters']
         
-        # shared 'palm' parameters
+        # fixture parameters to calculate flattened represenation 
         self.conv1 = nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300)))
         self.pool1 = nn.MaxPool2d(kernel_size=(3,1)) 
-
-        # fixture parameters to calculate flattened represenation 
+        
         self.conv2 = nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1)))
         self.pool2 = nn.MaxPool2d((4,1))
         conv_size = self._get_conv_output(input_size)  
 
         # factor specific 'finger' parameters
-        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1))),
-                                            nn.MaxPool2d((4,1)),
-                                            nn.Dropout(p=0.5)) for f in range(num_factors)])
+        self.fingers = nn.ModuleList([nn.Sequential(nn.utils.weight_norm(nn.Conv2d(1, num_filters, (1,300))),
+                                    self.relu, nn.MaxPool2d(kernel_size=(3,1)),          
+                                    nn.utils.weight_norm(nn.Conv2d(num_filters,10,(30,1))), 
+                                    self.relu, nn.MaxPool2d((4,1)), nn.Dropout(p=0.5)) for f in range(num_factors)])
         self.tips = nn.ModuleList([nn.utils.weight_norm(nn.Linear(conv_size, 1)) for f in range(num_factors)])
         
 
     def forward(self, input):
-
-        # shared forward computation 
-        x = self.pool1(self.relu(self.conv1(input)))
         
         # factor-specific forward computations
-        fingers = [finger(x) for finger in self.fingers]
+        fingers = [finger(input) for finger in self.fingers]
         
         # flatten the output of each factor specific computations        
         flattened_fingers = [f.view(f.size(0), -1) for f in fingers]
