@@ -109,14 +109,54 @@ def st_accuracy(y, y_hat):
         return -1
     return roc_auc_score(y, y_hat)
 
+def validate_yhat(y, y_hat):
+    """ ensure shapes match, and y_hat values \in [0,1]
+    y_hat := predicted labels
+    y := actual labels
+    
+    y_hat may be a list of arrays, or an array
+    """
+    if isinstance(y_hat, list):
+        y_hat_array = np.vstack(y_hat).transpose()
+        if y_hat_array.shape != y.shape:
+            y_hat_array = np.hstack(y_hat).transpose()
+        shape_is_valid = _shape_test(y, y_hat_array)
+        values_are_valid = _value_test(y, y_hat_array)
+    else:
+        shape_is_valid = _shape_test(y, y_hat)
+        values_are_valid = _value_test(y, y_hat)
+    
+    return shape_is_valid and values_are_valid
+
+def _shape_test(y, y_hat):
+    """ shape test for y, y_hat """
+    
+    shape_test = y_hat.shape == y.shape
+    if not shape_test:
+        print("Shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+        return False
+    
+    return True
+
+def _value_test(y, y_hat):
+    """ value test for y, y_hat """
+    
+    zeros_test_array = y_hat >= 0
+    ones_test_array = y_hat <= 1
+    values_test_array = np.logical_or(zeros_test_array, ones_test_array)
+    values_test = np.all(values_test_array)
+    if not values_test:
+        print("Values error for \hat{y}: ", y_hat[~values_test])
+        return False
+    
+    return True
+
 def mt_accuracy(y, y_hat, average=True):
-    """ 
-    multi-task ROC: the un-weighted average of task ROC scores; 
+    """ multi-task ROC: the un-weighted average of task ROC scores; 
     y_hat := predicted labels
     y := actual labels from data
     """
-    if not y_hat.shape == y.shape:
-        print("Error in AUC: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+    if not validate_yhat(y, y_hat):
         return -1
     rocs = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
@@ -133,8 +173,7 @@ def mt_avg_precision(y, y_hat, average=True):
     y_hat := predicted labels
     y := actual labels from data
     """
-    if not y_hat.shape == y.shape:
-        print("Error in precision: shape mismatch for \hat{y}: ", y_hat.shape, " and y: ", y.shape)
+    if not validate_yhat(y, y_hat):
         return -1
     precisions = []
     for targets, preds in zip(y.transpose(), y_hat.transpose()):
@@ -153,6 +192,9 @@ def mt_precision_at_recall(y, y_hat, average=True, recall_lvl=0.5):
     
     Assume y_hat is same shape as y, otherwise it is a list.
     """
+    
+    if not validate_yhat(y, y_hat):
+        return -1
     
     precisions_at_recall = []
     try:
@@ -181,6 +223,10 @@ def mt_avg_f1_score(y, y_hat, average=True):
     Assume y_hat is same shape as y, otherwise it is a list.
     """
     
+    
+    if not validate_yhat(y, y_hat):
+        return -1
+    
     f1_scores = []
     try:
         for targets, preds in zip(y.transpose(), y_hat.transpose()):
@@ -203,6 +249,9 @@ def mt_avg_mcc(y, y_hat, average=True):
     
     Assume y_hat is same shape as y, otherwise it is a list.
     '''
+    
+    if not validate_yhat(y, y_hat):
+        return -1
     
     mcc_scores = []
     try:

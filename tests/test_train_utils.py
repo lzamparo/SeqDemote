@@ -40,9 +40,12 @@ def make_fuzzy_predictions(preds, eps = 0.025, shape=0.1):
 
 def make_classification_labels_and_preds(shape=(128,164), p=0.1, 
                                          flips=10, noisy=False, 
-                                         eps=0.025, g_shape=0.1):
+                                         eps=0.025, g_shape=0.1,
+                                         as_list=False):
     ''' fixture generator for mt_aupr / mt_auroc 
-    returns labels, y_hat '''
+    returns labels, y_hat 
+    
+    as_list := return y_hat fixture as a list of one-dimensional arrays '''
     
     labels = np.random.binomial(1,p,size=shape)     
     preds = np.array(labels.copy(), dtype=np.float)
@@ -53,7 +56,12 @@ def make_classification_labels_and_preds(shape=(128,164), p=0.1,
     if noisy:
         preds = make_fuzzy_predictions(preds, eps, g_shape)
     
+    if as_list:
+        preds_list = [preds[:,i] for i in range(preds.shape[1])]
+        return labels, preds_list
+    
     return labels, preds
+
 
 
 def make_presigmoid_activations(preds, confident=True, to_tensor=False):
@@ -106,34 +114,59 @@ def test_st_accuracy():
     test_labels = test_labels[:,0]
     test_preds = test_preds[:,0]
     test_accuracy = tr_utils.st_accuracy(test_labels, test_preds)
-    ok_(0.5 <= test_accuracy < 1.0)
+    ok_(0.5 <= test_accuracy <= 1.0)
 
 def test_mt_accuracy():
     ''' make sure MT accuracy works '''
     test_labels, test_preds = make_classification_labels_and_preds()
     test_accuracy = tr_utils.mt_accuracy(test_labels, test_preds)
-    ok_(0.5 <= test_accuracy < 1.0)
+    ok_(0.5 <= test_accuracy <= 1.0)
     
 def test_mt_precision():
     ''' make sure MT precision works '''
     test_labels, test_preds = make_classification_labels_and_preds()
     test_precision = tr_utils.mt_avg_precision(test_labels, test_preds)
-    ok_(0.0 < test_precision < 1.0)    
+    ok_(0.0 <= test_precision <= 1.0)    
     
 def test_noisy_mt_precision():
     ''' make sure MT precision works '''
     test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
     test_precision = tr_utils.mt_avg_precision(test_labels, test_preds)
-    ok_(0.0 < test_precision < 1.0)   
+    ok_(0.0 <= test_precision <= 1.0)   
+    
+def test_mt_precision_at_recall():
+    ''' make sure MT precision at recall works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
+    test_precision = tr_utils.mt_precision_at_recall(test_labels, test_preds)
+    ok_(0.0 <= test_precision <= 1.0)
+    
+def test_mt_precision_at_recall_list():
+    ''' make sure MT precision at recall works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True, as_list=True)
+    test_precision = tr_utils.mt_precision_at_recall(test_labels, test_preds)
+    ok_(0.0 <= test_precision <= 1.0)
     
 def test_mt_f1():
     ''' make sure MT f1 works '''
     test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
     test_f1 = tr_utils.mt_avg_f1_score(test_labels, test_preds)
-    ok_(0.0 < test_f1 < 1.0)
+    ok_(0.0 <= test_f1 <= 1.0)
+    
+def test_mt_f1_list():
+    ''' make sure MT f1 with predictions as list works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True, as_list=True)
+    test_f1 = tr_utils.mt_avg_f1_score(test_labels, test_preds)
+    ok_(0.0 <= test_f1 <= 1.0)
 
 def test_mt_mcc():
     ''' make sure MT MCC works '''
     test_labels, test_preds = make_classification_labels_and_preds(noisy=True)
     test_mcc = tr_utils.mt_avg_mcc(test_labels, test_preds)
-    ok_(-1.0 < test_mcc < 1.0)
+    ok_(-1.0 <= test_mcc <= 1.0)
+    
+def test_mt_mcc_list():
+    ''' make sure MT MCC works '''
+    test_labels, test_preds = make_classification_labels_and_preds(noisy=True, as_list=True)
+    test_mcc = tr_utils.mt_avg_mcc(test_labels, test_preds)
+    ok_(-1.0 <= test_mcc <= 1.0)   
+    

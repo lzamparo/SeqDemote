@@ -10,7 +10,7 @@ factors = ["CEBPB","CEBPG", "CREB3L1", "CTCF","CUX1","ELK1","ETV1",
            "FOXJ2","KLF13","KLF16","MAFK","MAX","MGA","NR2C2",
            "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]
 
-### BindSpace and Focal loss models 
+### BindSpace full sharing models, limited sharing models, no sharing models, focal loss models 
 results_dir = "~/projects/SeqDemote/results/spearmint_runs/pytorch_models/detailed_stats"
 
 ### ls-gkmsvm results
