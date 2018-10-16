@@ -18,14 +18,15 @@ momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 cuda = True
-initial_lr = 0.01
+initial_lr = 0.001
+max_batches_per_epoch = 15000
 
 model_hyperparams_dict={'first_layer': {'type': 'int', 'min': 20, 'max': 100},
                         'second_layer': {'type': 'int', 'min': 20, 'max': 50},
-                        'dropout': {'type': 'float', 'min': 0.05, 'max': 0.4},
-                        'weight_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
-                        'bias_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1},
-                        'sparse_lambda': {'type': 'float', 'min': 1e-8, 'max': 1e-1}}
+                        'dropout': {'type': 'float', 'min': 0.1, 'max': 0.5},
+                        'weight_lambda': {'type': 'float', 'min': 1e-5, 'max': 1e-1},
+                        'bias_lambda': {'type': 'float', 'min': 1e-5, 'max': 1e-1},
+                        'sparse_lambda': {'type': 'float', 'min': 1e-5, 'max': 1e-1}}
 
 
 default_hyperparams={'first_layer': 100,

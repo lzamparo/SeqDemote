@@ -5,13 +5,11 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-
-from torch.utils.data import DataLoader
-from utils import accounting, train_utils
-
 import importlib.util
 import simple_spearmint
 
+from torch.utils.data import DataLoader
+from utils import accounting, train_utils
 from utils import torch_model_construction_utils
 
 
@@ -59,11 +57,9 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     except AttributeError:
         training_loss = model_module.train_loss
         
-    valid_loss = model_module.valid_loss
         
     print("...Checking to see if CUDA  is required", flush=True)
     if hasattr(model_module, 'cuda'):
-        import torch
         cuda = model_module.cuda and torch.cuda.is_available()
     else:
         cuda = False
@@ -95,7 +91,6 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
     
     print("...setting up logging for losses ")
     losses_train = []
-    losses_valid_log = []
     losses_valid_ap = []
     losses_valid_f1 = []
     losses_valid_mcc = []
@@ -183,7 +178,12 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             optim.step()           
             epoch_losses.append(loss.data)
             
-    
+            # Jump out early if the model has a limit
+            if hasattr(model_module, "max_batches_per_epoch") \
+               and model_module.max_batches_per_epoch > batch_idx:
+                print("Hit mini-batch limit for model: ", model_module.max_batches_per_epoch)
+                break
+               
         epoch_end_time = time.time()
         losses_train.append(epoch_losses)
         print("Mean training loss:\t\t {0:.6f}.".format(np.mean(np.array(epoch_losses)))) 
