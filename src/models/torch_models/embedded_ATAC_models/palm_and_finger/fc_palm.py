@@ -18,8 +18,8 @@ momentum = None
 embedded_seq_len = 84300
 embedding_dim_len = 300
 cuda = True
-initial_lr = 0.001
-max_batches_per_epoch = 15000
+initial_lr = 0.005
+max_batches_per_epoch = 500000
 
 model_hyperparams_dict={'first_layer': {'type': 'int', 'min': 20, 'max': 100},
                         'second_layer': {'type': 'int', 'min': 20, 'max': 50},

@@ -205,8 +205,8 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                     x, y = x.cuda(async=True), y.cuda(async=True)            
                 y_pred = model(x)
                 
-                if (batch_idx + 1) % 10 == 0:
-                    print("validation batch ", batch_idx)
+                if (batch_idx + 1) % 100 == 0:
+                    print("validation batch ", batch_idx, flush=True)
                 
                 y_pred = repackage_to_cpu(y_pred)
                 y_pred_sigmoid = nn.functional.sigmoid(y_pred)    
@@ -214,13 +214,13 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
             
                 
             avg_precision_at_recall = train_utils.mt_precision_at_recall(np.vstack(valid_labels), np.vstack(valid_outputs),recall_lvl=0.5)
-            print("    validation average precision at recall {0:.2f}:\t {1:.4f}.".format(0.50, avg_precision_at_recall * 100))
+            print("    validation average precision at recall {0:.2f}:\t {1:.4f}.".format(0.50, avg_precision_at_recall * 100), flush=True)
             avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(
                 valid_outputs))
-            print("    validation average F1 score:\t {0:.4f}.".format(avg_f1 * 100))            
+            print("    validation average F1 score:\t {0:.4f}.".format(avg_f1 * 100), flush=True)            
             avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(
                 valid_outputs))
-            print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100))
+            print("    validation average MCC score:\t {0:.4f}.".format(avg_mcc * 100), flush=True)
             losses_valid_ap.append(avg_precision_at_recall)
             losses_valid_f1.append(avg_f1)
             losses_valid_mcc.append(avg_mcc)
