@@ -9,6 +9,7 @@ import importlib.util
 import simple_spearmint
 
 from torch.utils.data import DataLoader
+from torch.cuda import is_available as cuda_available
 from utils import accounting, train_utils
 from utils import torch_model_construction_utils
 
@@ -60,7 +61,7 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
         
     print("...Checking to see if CUDA  is required", flush=True)
     if hasattr(model_module, 'cuda'):
-        cuda = model_module.cuda and torch.cuda.is_available()
+        cuda = model_module.cuda and cuda_available()
     else:
         cuda = False
         
