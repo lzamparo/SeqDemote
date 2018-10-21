@@ -2,6 +2,7 @@ import numpy as np
 import os
 from collections import OrderedDict
 from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, matthews_corrcoef, precision_recall_curve
+import torch
 
 
 ### Weak AggMo implementation attempt.   
@@ -108,6 +109,7 @@ def st_accuracy(y, y_hat):
         print("Error in single task AUC: shape mismatch in \hat{y}: ", y_hat.shape, " and y: ", y.shape)
         return -1
     return roc_auc_score(y, y_hat)
+
 
 def validate_yhat(y, y_hat):
     """ ensure shapes match, and y_hat values \in [0,1]
@@ -332,3 +334,29 @@ def count_params(param_list):
             cumulative_product *= dimension
         num_params += cumulative_product
     return num_params    
+
+def repackage_to_cpu(y_pred, dim=1, unsqueeze=False):
+    ''' Repackage the predictions in y_pred 
+    to the CPU.  If it is a tensor, call `.cpu()`. 
+    If it is a list, call `.cpu()` on each element
+    
+    Need to deal with the case that y_pred is a list of
+    tensors in the case where the various outputs are 
+    predicted with separate networks.  If this is the 
+    case, unsqueeze each dimension of y_pred.
+
+    '''
+    
+    try:
+        # call .cpu on y_pred
+        repacked = y_pred.cpu()
+    except AttributeError:
+        # it's a list.  Repackage into a tensor, call .cpu on the whole thing
+        if unsqueeze:
+            y_pred = [e.unsqueeze_(dim) for e in y_pred]
+        repacked = torch.cat(y_pred, dim=dim)
+        repacked = repacked.cpu()
+        
+    return repacked
+
+

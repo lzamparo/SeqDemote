@@ -1,4 +1,5 @@
 import sys
+import argparse
 import os
 import torch
 import importlib.util
@@ -7,25 +8,31 @@ import numpy as np
 from torch.utils.data import DataLoader
 from utils import train_utils
 
-from tensorboardX import SummaryWriter
+
+parser = argparse.ArgumentParser()
+parser.add_argument("config", help='path to config file')
+parser.add_argument("--savefile", help='path to saved model state', default=None)
+args = parser.parse_args()
 
 ### Load up and step through validating data
-if len(sys.argv) < 2:
-    sys.exit("Usage: pytorch_validate.py <configuration_name> <save_state_file>")
-
-model_config, model_save_file = sys.argv[1], sys.argv[2]
+model_config = args.config
+model_save_path_present = False
+if args.savefile:
+    model_save_file = args.savefile
+    
 model_path_name = os.path.join(os.path.expanduser(os.getcwd()),'models',model_config)
 spec = importlib.util.spec_from_file_location(model_config, model_path_name)
 model_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_module)
 
-if hasattr(model_module, 'save_dir') and os.path.exists(os.path.join(train_utils.find_project_root(), 'results')):
+if args.savefile and hasattr(model_module, 'save_dir') and os.path.exists(os.path.join(train_utils.find_project_root(), 'results')):
     model_save_path = os.path.join(train_utils.find_project_root(), 'results', model_module.save_dir, model_save_file)
+    model_loaded_from_save = True
 
-
-print("...Build model and load model state from save state")
+print("...Build model, load model state from save state if provided")
 model = model_module.net
-model.load_state_dict(torch.load(model_save_path, map_location=lambda storage, loc: storage))
+if model_save_path_present:
+    model.load_state_dict(torch.load(model_save_path, map_location=lambda storage, loc: storage))
 
 if hasattr(model_module, "valid_loss"):
     valid_loss = model_module.valid_loss
@@ -53,35 +60,26 @@ if hasattr(model_module,'data_cast') and hasattr(model_module, 'label_cast'):
 print("Validating...")
 valid_outputs = []
 valid_labels = []
-
-losses = []
-
-# for Tensorbard logging
-write_graph = True # flag flipped once first batch processed
-writer = SummaryWriter('./logs')
-writer.add_scalar('valid loss', val_loss)
+valid_losses = []
 
 model.eval()
 for batch_idx, (x, y) in enumerate(valid_loader):
     valid_labels.append(y.numpy())
     x, y = data_cast(x), data_cast(y)         
     
-    if write_graph:
-        writer.add_graph(model, x)
-        write_graph = False
-        
     y_pred = model(x)
-    
-    loss = valid_loss(y_pred, y)
+    losses = train_utils.per_task_loss(y_pred, y, valid_loss, do_sum=False)
+    loss = sum(losses)
     if (batch_idx + 1) % 50 == 0:
         print("validation batch ", batch_idx, " : ", loss.data)
-    losses.append(loss.data)
-    y_pred_sigmoid = torch.nn.functional.sigmoid(y_pred)
+    valid_losses.append(losses)
+    
+    y_pred_repacked = train_utils.repackage_to_cpu(y_pred, unsqueeze=True)
+    y_pred_sigmoid = torch.nn.functional.sigmoid(y_pred_repacked)  
     valid_outputs.append(y_pred_sigmoid.data.numpy())
     
 print("Mean validation loss:\t\t {0:.6f}".format(np.mean(np.array(losses))))
-ap = train_utils.mt_avg_precision(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
-auroc = train_utils.mt_accuracy(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
+pr50 = train_utils.mt_precision_at_recall(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 avg_f1 = train_utils.mt_avg_f1_score(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(valid_outputs), average=False)
 
@@ -89,8 +87,5 @@ avg_mcc = train_utils.mt_avg_mcc(np.vstack(valid_labels), np.vstack(valid_output
 filename = os.path.basename(model_config)
 filename = filename.lstrip('BindSpace_').rstrip(".py") + ".txt"
 with open(os.path.join(train_utils.find_project_root(), 'results' , 'BindSpace_embedding_extension',filename),'w') as f:
-    for e in aupr:
+    for e in pr50:
         print(e, file=f)
-
-#print("    validation roc:\t {0:.4f}.".format(auroc * 100))
-#print("    validation aupr:\t {0:.4f}.".format(aupr * 100))

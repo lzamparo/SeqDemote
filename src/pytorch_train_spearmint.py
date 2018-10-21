@@ -14,28 +14,6 @@ from utils import accounting, train_utils
 from utils import torch_model_construction_utils
 
 
-def repackage_to_cpu(y_pred):
-    ''' Repackage the predictions in y_pred 
-    to the CPU.  If it is a tensor, call `.cpu()`. 
-    If it is a list, call `.cpu()` on each element
-    
-    Need to deal with the case that y_pred is a list of
-    tensors in the case where the palm and finger model 
-    produce the following:
-
-    '''
-    
-    try:
-        # call .cpu on y_pred
-        repacked = y_pred.cpu()
-    except AttributeError:
-        # it's a list.  Repackage into a tensor, call .cpu on the whole thing
-        repacked = torch.cat(y_pred, dim=1)
-        repacked = repacked.cpu()
-        
-    return repacked
-
-
 def validation_ap_objective(suggestion, model_module, model_name, trial_num, outfile=None):
     ''' Instantiate the network in the model_module, with 
     hyperparameters for optimizer give by suggestion.
@@ -208,7 +186,7 @@ def validation_ap_objective(suggestion, model_module, model_name, trial_num, out
                 if (batch_idx + 1) % 100 == 0:
                     print("validation batch ", batch_idx, flush=True)
                 
-                y_pred = repackage_to_cpu(y_pred)
+                y_pred = train_utils.repackage_to_cpu(y_pred)
                 y_pred_sigmoid = nn.functional.sigmoid(y_pred)    
                 valid_outputs.append(y_pred_sigmoid.data.numpy())
             
