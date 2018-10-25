@@ -8,6 +8,9 @@ factors = ["CEBPB","CEBPG", "CREB3L1", "CTCF","CUX1","ELK1","ETV1",
            "FOXJ2","KLF13","KLF16","MAFK","MAX","MGA","NR2C2",
            "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]
 
+### include gkm-svm benchmark?
+include_gkm = False
+
 ### BindSpace models compared against each other
 model_dir = "~/projects/SeqDemote/results/BindSpace_embedding_extension/results_per_factor"
 
@@ -20,27 +23,28 @@ def gather_gkm_predictions(output_file):
     y_hat = np.array([line.split()[-1] for line in lines], dtype=float)
     return y_hat
 
-# read ls-gkmsvm results, calc AP, read results into tidy df
-gkmsvm_dfs = []
-exp_root = os.path.expanduser(gkmsvm_results_dir)
-for model in os.listdir(exp_root):
-    os.chdir(os.path.join(exp_root, model))
-    ap_list = []
-    for f in factors:
-        # read peaks, flanks
-        peaks_predictions = gather_gkm_predictions(f + "_predicted_peaks.txt")
-        flanks_predictions = gather_gkm_predictions(f + "_predicted_flanks.txt")
-        y_hat = np.hstack((peaks_predictions, flanks_predictions))
-        # calculate AP, store
-        peaks_labels = np.ones_like(peaks_predictions)
-        flanks_labels = np.zeros_like(flanks_predictions)
-        y = np.hstack((peaks_labels, flanks_labels))
-        ap = average_precision_score(y, y_hat)
-        ap_list.append(ap)
-        
-    gkm_model_name_list = [model for l in range(len(factors))]
-    gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'AP': ap_list})
-    gkmsvm_dfs.append(gkmsvm_df)
+# read ls-gkmsvm results, calc PR50, read results into tidy df
+if include_gkm:
+    gkmsvm_dfs = []
+    exp_root = os.path.expanduser(gkmsvm_results_dir)
+    for model in os.listdir(exp_root):
+        os.chdir(os.path.join(exp_root, model))
+        ap_list = []
+        for f in factors:
+            # read peaks, flanks
+            peaks_predictions = gather_gkm_predictions(f + "_predicted_peaks.txt")
+            flanks_predictions = gather_gkm_predictions(f + "_predicted_flanks.txt")
+            y_hat = np.hstack((peaks_predictions, flanks_predictions))
+            # calculate AP, store
+            peaks_labels = np.ones_like(peaks_predictions)
+            flanks_labels = np.zeros_like(flanks_predictions)
+            y = np.hstack((peaks_labels, flanks_labels))
+            ap = average_precision_score(y, y_hat)
+            ap_list.append(ap)
+            
+        gkm_model_name_list = [model for l in range(len(factors))]
+        gkmsvm_df = pd.DataFrame.from_dict({'model': gkm_model_name_list, 'factor': factors, 'AP': ap_list})
+        gkmsvm_dfs.append(gkmsvm_df)
     
 # read bindspace results into tidy df
 os.chdir(os.path.expanduser(model_dir))
@@ -62,11 +66,12 @@ for f in [f for f in os.listdir('.') if f.startswith('one') or f.startswith('two
     df_list.append(pd.DataFrame.from_dict({'model': model_name_list, 'factor': factors, 'AP': aupr_list}))     
 
 df_list.append(bindspace_df)
-df_list.extend(gkmsvm_dfs)
+if include_gkm:
+    df_list.extend(gkmsvm_dfs)
 dfs = pd.concat(df_list)
 
 # save path
-save_path = "/Users/zamparol/projects/SeqDemote/results/BindSpace_embedding_extension/results_per_factor/gkmsvm_included/"
+save_path = "/Users/zamparol/projects/SeqDemote/results/BindSpace_embedding_extension/results_per_factor/"
 
 # Plot with flipped axes, and calculate the difference for each factor
 p = gg.ggplot(gg.aes(y='AP', x='factor',color='model'), dfs)
