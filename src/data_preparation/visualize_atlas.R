@@ -10,7 +10,7 @@ library(AtlasAnnotater)
 
 setwd('~/projects/SeqDemote/results/diagnostic_plots/ATAC/')
 atlas <- read.csv(file = "annotated_atlas.csv")
-atlas <- data.table(atlas[,.(seqnames, start, end, width, exon, intron, annot, nearest.gene, nearest.gene.dist)])
+atlas <- data.table(atlas)
 setnames(atlas, c("annot", "nearest.gene"), c("annotation","nearest_gene"))
 
 
@@ -68,7 +68,7 @@ gcp = ggplot(gene_length_dt, aes(x=max_len,y=count, shape=coding)) +
   scale_x_log10() +
   scale_shape_discrete(name="Gene is") + 
   geom_text_repel(
-    data = gene_length_dt[count > 150,],
+    data = gene_length_dt[count > 35,],
     aes(label = nearest_gene),
     size = 3,
     box.padding = unit(0.35, "lines"),
@@ -80,7 +80,7 @@ gcp = ggplot(gene_length_dt, aes(x=max_len,y=count, shape=coding)) +
 
 
 
-pdf(file = "reduced_atlas_diagnostic_plots.pdf", width = 15, height = 13)
+pdf(file = "atlas_diagnostic_plots.pdf", width = 15, height = 13)
 
 # compile plots into a list
 pltList <- list()

@@ -1,6 +1,81 @@
-from torch.utils.data import Dataset
 import h5py
+import pickle
 import numpy as np
+
+from numba import jit
+from torch.utils.data import Dataset
+
+class BindspaceSingleProbeDataset(Dataset):
+    """ Given an probe index, return the embedding of all / some kmers in that probe 
+    (this step is transformer dependent)
+    
+        h5_filepath (string): path to the h5 file storing the encoded probes as ints
+        index_to_code_filepath (string): path to the pkl file that stores the encoder / decoder
+        dicts for the probes.
+        
+        
+    """    
+    def __init__(self, h5_filepath, index_to_code_filepath, dataset='training', transform=None):
+        path_dict = {'training': ('/data/training/train_data','/labels/training/train_labels'),
+                          'validation': ('/data/validation/valid_data','/labels/validation/valid_labels')}
+        self.data_path, self.label_path = path_dict[dataset]
+        
+        with open(index_to_code_filepath, 'rb') as f:
+            packed_dict = pickle.load(f)
+            self.id_to_kmer, self.kmer_to_vec = packed_dict['id_to_wc_kmers'], packed_dict['wc_kmer_to_vec']
+        
+        
+        self.embedding_dims = 300
+        self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
+        self.num_peaks, self.probes_per_peak, self.kmers_per_probe = self.h5f[self.data_path].shape
+        
+        # pass through index_to_code filepath here so transformer can get what we need
+        self.transform = transform
+        TF_overlaps = [s.encode('utf-8') for s in ["CEBPB","CEBPG", "CREB3L1", "CTCF",
+                                                   "CUX1","ELK1","ETV1","FOXJ2","KLF13",
+                                                   "KLF16","MAFK","MAX","MGA","NR2C2",
+                                                   "NR2F1","NR2F6","NRF1","PKNOX1","ZNF143"]]
+        TF_colnames = self.h5f[self.label_path].attrs['column_names']
+        self.TF_mask_array = np.array([n in TF_overlaps for n in TF_colnames])
+        
+    def __getitem__(self, index):
+        pass
+    
+    def __len__(self):
+        return self.num_peaks * self.probes_per_peak
+    
+    def close(self):
+        self.h5f.close()
+        
+        
+class ProbeDecodingTransformer(object):
+    """ Decode the probes into the not-quite average of the embeddings of the probe """
+    
+    def __init__(self, *args, **kwargs):
+        self.decode_to_vec = kwargs['decoder']
+        self.encode_to_kmer = kwargs['encoder']
+        self.embedding_dim = kwargs['dim']
+        
+    def __call__(self, probe):
+        return self.decode_probe(probe)
+    
+    @jit
+    def decode_probe(probe):
+        ''' Each element in the probe 1-D array of ints encodes an 8-mer that 
+        matches 16 different WC kmers, and each of those has a code in BindSpace
+        So to calculate the placement of one probe (row). '''
+        
+        probe_ints = probe.astype(int)
+        p = max(probe_ints.shape)
+        point = np.zeros(p,self.embedding_dim)
+        
+        for i,elem in enumerate(probe_ints):
+            wc_kmers = self.encode_to_kmer[elem]
+            for kmer in wc_kmers:
+                point[i,:] += self.decode_to_vec[kmer]
+            point[i,:] = point[i,:] * (1 / np.sqrt(len(wc_kmers)))
+            
+        return np.sum(point, axis=1) * (1 / np.sqrt(p))
 
 
 class BindspaceProbeDataset(Dataset):
