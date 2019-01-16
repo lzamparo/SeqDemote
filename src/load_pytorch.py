@@ -15,15 +15,10 @@ class BindspaceSingleProbeDataset(Dataset):
         
         
     """    
-    def __init__(self, h5_filepath, index_to_code_filepath, dataset='training', transform=None):
-        path_dict = {'training': ('/data/training/train_data','/labels/training/train_labels'),
-                          'validation': ('/data/validation/valid_data','/labels/validation/valid_labels')}
+    def __init__(self, h5_filepath, dataset='training', transform=None):
+        path_dict = {'training': ('/train/data/train_data','/train/labels/train_labels'),
+                          'validation': ('/valid/data/valid_data','/valid/labels/valid_labels')}
         self.data_path, self.label_path = path_dict[dataset]
-        
-        with open(index_to_code_filepath, 'rb') as f:
-            packed_dict = pickle.load(f)
-            self.id_to_kmer, self.kmer_to_vec = packed_dict['id_to_wc_kmers'], packed_dict['wc_kmer_to_vec']
-        
         
         self.embedding_dims = 300
         self.h5f = h5py.File(h5_filepath, 'r', libver='latest', swmr=True)
@@ -39,7 +34,15 @@ class BindspaceSingleProbeDataset(Dataset):
         self.TF_mask_array = np.array([n in TF_overlaps for n in TF_colnames])
         
     def __getitem__(self, index):
-        pass
+        peak = index // self.probes_per_peak
+        probe = index // self.num_peaks
+        
+        features = self.h5f[self.data_path][peak,probe]
+        labels = self.h5f[self.label_path][peak]
+        if self.transform is not None:
+            features = self.transform(features)
+        labels = labels[self.TF_mask_array]
+        return features, labels
     
     def __len__(self):
         return self.num_peaks * self.probes_per_peak

@@ -30,13 +30,13 @@ pba <- ggplot(grouped_peaks, aes(x=annotation, fill=annotation)) +
 # Peak length by chromosome
 plc <- ggplot(atlas[width < 1600,], aes(x = width, y = seqnames)) +
   geom_density_ridges(stat = "binline",bins=50) + 
-  xlim(c(0,1800)) + 
+  xlim(c(0,3000)) + 
   xlab("Peak length (bp)") + ylab("Chromosome") + 
   theme_ridges(grid = FALSE)
 
 
 # Fine-grained histogram of peak lengths
-fgpl <- ggplot(atlas[width < 1800,], aes(x = width, y = annotation)) +
+fgpl <- ggplot(atlas[width < 3000,], aes(x = width, y = annotation)) +
   geom_density_ridges(aes(fill=annotation), stat = "binline",bins=80) +
   labs(title="Peak lengths by annotation")
 
@@ -45,7 +45,7 @@ fgpl <- ggplot(atlas[width < 1800,], aes(x = width, y = annotation)) +
 # Gene complexity plot: number of peaks / gene
 
   # Count peaks / gene
-gene_count = atlas[annotation != "intergenic", .N, by = nearest_gene]
+gene_count = atlas[annotation != "Intergenic", .N, by = SYMBOL]
 setnames(gene_count, "N", "count")
 
   # Get gene length data

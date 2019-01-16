@@ -1,18 +1,22 @@
 import os
 import torch
+import pickle
+
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from nose.tools import eq_, ok_ 
 
 from utils.train_utils import find_project_root
+
 from load_pytorch import ATAC_Valid_Dataset, SubsequenceTransformer
 from load_pytorch import Embedded_k562_ATAC_train_dataset
 from load_pytorch import Embedded_k562_ATAC_validation_dataset
 from load_pytorch import EmbeddingReshapeTransformer
 from load_pytorch import ProbeReshapeTransformer
 from load_pytorch import BindspaceProbeDataset
-
+from load_pytorch import ProbeDecodingTransformer
+from load_pytorch import BindspaceSingleProbeDataset
 
 
 '''
@@ -59,6 +63,10 @@ k562_targets = 19
 k562_num_peak_batches = k562_valid_peak_examples // k562_batch_size
 k562_num_probe_batches = k562_valid_probe_examples // k562_batch_size
 
+valid_single_probe_count = 1766 * 28
+single_probe_h5_path = os.path.join(find_project_root(), "data", "ATAC", "K562", "K562_per_kmer_embedding.h5")
+single_probe_pkl_file = os.path.join(find_project_root(), "data", "ATAC", "K562", "kmer_dicts.pkl")
+
 def setup_dataset_and_loader(transform=False, workers=1):
     if transform:
         transformer = SubsequenceTransformer(subsequence_size)
@@ -99,6 +107,47 @@ def setup_k562_bindspace_probe_dataset_and_loader(transform=False, workers=1):
                               shuffle=True,
                               num_workers=workers)
     return valid_dataset, valid_loader
+
+def setup_k562_single_probe_dataset_and_loader(workers=1):
+    with open(single_probe_pkl_file, 'rb') as f:
+        packed_dict = pickle.load(f)
+        id_to_kmer, kmer_to_vec = packed_dict['id_to_wc_kmers'], packed_dict['wc_kmer_to_vec']
+    
+    transformer = ProbeDecodingTransformer(dim=300, decoder=kmer_to_vec, encoder=id_to_kmer)
+    valid_dataset = BindspaceSingleProbeDataset(single_probe_h5_path, dataset='validation', transform=transformer)
+    
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=k562_batch_size,
+                              shuffle=True,
+                              num_workers=workers)
+    return valid_dataset, valid_loader
+        
+
+##### k562 single probe data loader set
+def test_build_single_probe_dataset_and_loader():
+    """ Can I build the dataset for the single probe data """
+    
+    valid_dataset, valid_dataloader = setup_k562_single_probe_dataset_and_loader()
+    valid_len = len(valid_dataset)
+    valid_dataset.close()
+    eq_(valid_len, valid_single_probe_count)
+        
+
+def test_build_single_probe_dataset_and_loader_shape():
+    """ Can I build a dataset for the BindSpace probe data 
+    and have it give me the right shaped data """     
+     
+    valid_dataset, valid_dataloader = setup_k562_single_probe_dataset_and_loader()
+     
+    stop = 1
+    for batch_idx, (x, y) in enumerate(valid_dataloader):
+        data_shape, target_shape = x.shape, y.shape
+        if batch_idx == stop:
+            break
+    
+    valid_dataset.close()
+    eq_(data_shape, (k562_batch_size, embedding_dim))
+    eq_(target_shape, (k562_batch_size, k562_targets))
 
 ##### k562 data loader tests
 def test_build_bindspace_probeset_and_loader():
